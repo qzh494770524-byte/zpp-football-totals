@@ -1,0 +1,26 @@
+# 大体量原始数据/缓存,不进仓库
+*.xlsx
+evidence/
+exports/
+analysis/
+新建文件夹/
+v8_pipeline_out_multiday/
+v8_pipeline_out_min5/
+v8_pipeline_out/
+v8_pipeline_out_test/
+
+# 大体量抓取归并JSON(保留小的summary/status json)
+collection_2026-09-09.json
+multi_collection_2026-09-09.json
+history_collection_*.json
+
+# 日志/进程文件
+*.log
+*.pid
+
+# Python缓存
+__pycache__/
+*.pyc
+
+# 临时文件
+nowgoal.html

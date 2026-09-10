@@ -1,0 +1,15 @@
+{
+  "file": "C:\\Users\\Administrator\\Desktop\\zpp\\Nowgoal_2026-09-02_至_2026-09-09_多庄水位比分.xlsx",
+  "source_status": "赛事名单及比分已整理，未获取的多庄盘口与历史继续补采",
+  "matches": 5348,
+  "finished_matches": 5323,
+  "pending_matches": 2,
+  "matches_with_multiple_ah_books": 4159,
+  "matches_with_ah": 4531,
+  "comparison_pending_matches": 0,
+  "bookmaker_match_rows": 29317,
+  "initial_ah_rows": 29317,
+  "verified_closing_rows": 15203,
+  "history_pending_rows": 12766,
+  "ah_bookmakers": 11
+}
