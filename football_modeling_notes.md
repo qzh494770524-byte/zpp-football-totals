@@ -136,3 +136,23 @@ Shin 对 favorite-longshot bias(热门被低估、冷门被高估的系统性偏
   [ResearchGate: Favorite-Longshot Bias and Market Efficiency in the Soccer Betting Market](https://www.researchgate.net/publication/351985837_Favorite-Longshot_Bias_and_Market_Efficiency_in_the_Soccer_Betting_Market),
   [ScienceDirect: 什么驱动了体育博彩市场里的赔率偏差](https://www.sciencedirect.com/science/article/abs/pii/S105905602300059X)
 - 去水方法(multiplicative / power / Shin)对比与实现: [ResearchGate: Adjusting Bookmaker's Odds to Allow for Overround (Cain, Law & Peel)](https://www.researchgate.net/publication/326510904_Adjusting_Bookmaker's_Odds_to_Allow_for_Overround), [Shin方法公式与GitHub实现 mberk/shin](https://github.com/mberk/shin), [opisthokonta.net implied包说明](https://opisthokonta.net/?p=1797), [karlwhelan.com Shin方法与z参数论文](https://www.karlwhelan.com/Papers/ShinzNov24.pdf)
+
+### 验证结果(2026-09-10 补充,已用现有历史数据测试): Leader/Follower分层假设,未获支持
+
+上面提出的"Crown/Sbobet(leader) vs 其余公司(follower)"分层假设,当天就用已有的8天历史数据
+(不需要重新抓取)离线测试了一遍(min_companies>=2, n=3650可评分场次)。结果:
+
+- 只用Leader方向单独预测: 51.63%(n=1774),和整体模型51.73%基本没区别。
+- Leader与Follower方向"一致" vs "冲突": 一致时51.29%(n=1472),冲突时信Leader反而是53.14%
+  (n=271,但样本小,标准误约3pp,不显著)——方向和假设(一致更可信)相反。
+- "判小+Leader确认": 52.77%(n=578) vs "判小+Leader未确认": 50.71%(n=1124)——方向勉强对,
+  但只差2个点,在1.3个标准误内,不算显著。
+- "判大+Leader确认"(本该强化前面发现的57.4%水位一致效应): 51.27%(n=987) vs
+  "判大+Leader未确认": 52.76%(n=961)——**方向和假设相反**,确认反而更低。
+
+**结论:Crown/Sbobet作为leader的简单二分法,拿真实数据一测站不住,不要再往这个方向深挖
+(至少不要用"是不是Crown/Sbobet"这么粗的二分法)。** 可能的原因:leader/follower这个分层
+本身是海外主流体育(NFL/NBA等)博彩市场的经验,不一定适用于亚洲盘/东亚及南美中小联赛为主的
+Nowgoal数据;也可能两家公司样本(n=1774)对这批联赛覆盖不够多。如果以后还想深挖这个方向,
+要先确认Crown/Sbobet在当前数据集里到底覆盖了哪些联赛、样本是否有代表性,而不是直接扩大到
+全量重测。
