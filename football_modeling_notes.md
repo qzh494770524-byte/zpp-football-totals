@@ -13,6 +13,15 @@
   (训练集54.8% vs 测试集56.1%,且未确认时测试集只有47.8%)。
 - 用真实球队近6场/主客场进失球数据做的简易泊松进球模型,以及"两模型冲突时信进球模型"
   这条规则,在样本外验证中被推翻(反而是旧盘口模型更准),已废弃。
+- **去水方法换成Shin's method,在真正够格的大样本(n=3908,训练1901/测试2007)上测过,
+  没有帮助,方向还略微更差。** 用 `pip install shin`(mberk/shin,已发表方法的现成实现,
+  两个结果的市场下等价于Additive Method)重算了water_sig(大小球水位devig)和一个新的、
+  真正devig过的euro_sig(原来的euro_sig只是看未去水的平局赔率原始变动,现在用home+draw+away
+  三项欧赔配合Shin方法算出真实平局隐含概率的漂移)。命中率:原方法train 52.45%/test
+  50.52%,Shin版本train 51.76%/test 49.68%——两个独立时间段都是原方法更好,不是巧合的
+  噪声,但两方法分歧的630场里"原方法对330次 vs Shin对300次"跑McNemar检验p≈0.23,没有
+  显著到能下结论"更差"。**结论:不要把去水方法从multiplicative换成Shin,composite里
+  line_sig权重最大(20/55),可能已经把水位/欧赔这两个子信号的devig方式差异摊薄了。**
 - 另建了一套独立于v8漂移模型的"固定规则"方法(backtest_today79.py):不看盘口怎么移动的,
   只取赛前有时间核验的最后一口报价,固定公司优先级(Bet365/Crown/Sbobet/1xBet)、至少3家
   同盘口、去水后指标取中位数决定方向。79场回测正收益场次率61.1%(n=19,95% CI
@@ -140,9 +149,9 @@ Shin 对 favorite-longshot bias(热门被低估、冷门被高估的系统性偏
 3. **高成本、需要改采集脚本**:如果第2步显示 leader/follower 分组确实有信息量,再考虑在
    `nowgoal_collect.py` 里增加公司名字段的完整保留 + 中间时间点快照,以便未来做真正的
    steam-move(分钟级联动)检测。
-4. **去水方法替换**:在 `implied_prob_pair()` 旁边新增一个 `implied_prob_shin()` 作为对照
-   (不要替换现有实现,保持可回退),用两种方法各算一版 `water_signal`,离线比较两者在样本外的
-   命中率差异,尤其重点看欧赔平局代理这个子信号。
+4. ~~去水方法替换~~ **已测试(2026-09-10续3),结论是不采用**——见下方"已知验证过的东西"列表
+   和文末对应章节:在n=3908的大样本上,Shin方法比现有multiplicative方法命中率略低
+   (train/test两段都是),不显著但方向一致,没有理由替换。
 
 ### 信息来源
 
@@ -282,3 +291,50 @@ CLV能更早说明这套规则是不是真的在识别市场即将确认的方�
 - 小样本回测的过拟合与选择偏差陷阱: [Great Bets 如何在不过拟合的情况下回测投注策略](https://www.greatbets.co.uk/how-to-backtest-a-sports-betting-strategy-without-overfitting/), [Betting Forum 过拟合问题:回测系统为什么在实盘失败](https://www.betting-forum.com/threads/the-overfitting-problem-why-backtested-betting-systems-fail-in-production.47444/)
 - CLV比胜率更快验证模型、约50注可达统计显著: [Rowdie CLV是唯一能说明模型好坏的指标](https://www.rowdie.co.uk/closing-line-value-the-only-metric-that-tells-you-whether-your-model-is-any-good), [ModelPlay 投注模型如何验证:Holdout/Grade/EV/CLV](https://modelplay.ai/learn), [sports-ai.dev CLV指南](https://www.sports-ai.dev/blog/closing-line-value-and-ai-model-performance)
 - 分数Kelly与优势估计误差: [Matthew Downey 为什么用分数Kelly:不确定性与下行风险模拟](https://matthewdowney.github.io/uncertainty-kelly-criterion-optimal-bet-size.html), [Quantt Kelly准则详解](https://www.quantt.co.uk/resources/kelly-criterion-explained), [arXiv: Kelly betting on horse races with uncertainty in probability estimates](https://arxiv.org/pdf/1701.02814)
+
+---
+
+## 2026-09-10(续3) 去水方法真正测了一遍:Shin's method vs multiplicative,大样本、有结论
+
+### 起因
+
+早前的研究记录里提过去水方法这个"顺手可以改进的技术点"(Shin's method对不对称赔率矫正
+favorite-longshot bias更彻底),但当时只写了"接入建议",没有真的测。这次用户让浏览器工具
+去查资料,查到 `pip install shin`(mberk/shin,发表方法的现成Python实现,兼容Python 3.9+,
+两个结果的市场下等价于Clarke/Kovalchik/Ingram 2017的Additive Method,不需要自己重新实现
+迭代算法),于是把这个悬而未决的项真正测了。
+
+### 发现并顺手修的一个数据缺口
+
+`load_workbook_data()` 解析"胜平负(欧洲赔率)"这部分数据时,只保留了平局赔率
+(`open_draw`/`live_draw`),主胜/客胜赔率被丢弃——这意味着现有的 `euro_sig` 根本没有做
+任何去水,只是看"未去水的平局赔率原始变动方向",不是真正的隐含概率漂移。要用Shin方法算出
+真实的平局隐含概率,必须同时有主胜、平局、客胜三项赔率。这次在独立测试脚本里重新读了一遍
+原始sheet把这三项都取出来(没有改 `v8_backtest_pipeline.py` 本身)。
+
+### 测试设计
+
+n=3908(8天数据集,min_companies>=2,按赛前日期切分:9/2-9/5为train共1901场,9/6-9/9为
+test共2007场,和早前"猜小+平局概率"信号验证用的是同一种切分方式)。两个版本的信号:
+- **原方法**:`compute_odds_drift_signal()` 原样不动。
+- **Shin版本**:`water_sig` 用Shin去水后的大/小球隐含概率算漂移(替代multiplicative);
+  `euro_sig` 用Shin对主胜/平/客三项赔率去水后的平局隐含概率算漂移(替代原来未去水的
+  原始赔率变动)。`line_sig`、`handicap_sig`、权重(20/15/10/10)、一致性加成全部不变。
+
+### 结果
+
+| | 原方法命中率 | Shin版本命中率 |
+|---|---|---|
+| train(n=1901) | 52.45% | 51.76% |
+| test(n=2007) | 50.52% | 49.68% |
+| 全部(n=3908) | 51.46% | 50.69% |
+
+两方法方向一致83.9%,不一致的630场里原方法对330次、Shin版本对300次,McNemar检验
+(330 vs 300)卡方≈1.43,p≈0.23,不显著。
+
+**结论:不要把去水方法从multiplicative换成Shin。** train和test两个独立时间段都是原方法
+命中率更高,方向一致但差距本身不显著(p≈0.23),说明这更可能是"确实没有实质差异"而不是
+"有差异但样本还不够看出来"——如果是后者,通常不会在两个独立切分里都指向同一个方向却又
+刚好卡在临界值上,更简单的解释是line_sig权重最大(20/55)已经主导了composite,water_sig/
+euro_sig的去水方法差异被摊薄到测不出来。以后不用再测"哪种去水公式更好"这个方向了,除非
+准备把权重结构本身也一起重新设计。
