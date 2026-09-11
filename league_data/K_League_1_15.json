@@ -1,0 +1,1694 @@
+{
+  "league_id": 15,
+  "league_name": "K League 1",
+  "season": "2026",
+  "fetched_at": "2026-09-11T07:10:12.220699+00:00",
+  "n_teams": 12,
+  "n_matches": 167,
+  "teams": {
+    "480": "Ulsan HD FC",
+    "481": "Pohang Steelers",
+    "484": "Jeonbuk Hyundai Motors",
+    "488": "Daejeon Citizen",
+    "494": "Gimcheon Sangmu FC",
+    "497": "Incheon United",
+    "741": "FC Seoul",
+    "4075": "Jeju SK FC",
+    "7800": "Bucheon FC 1995",
+    "9945": "Gangwon FC",
+    "16584": "Gwangju Football Club",
+    "21249": "FC Anyang"
+  },
+  "matches": [
+    {
+      "id": 2921958,
+      "date": "2026-02-28T13:00:00+08:00",
+      "home_id": 497,
+      "away_id": 741,
+      "home": "Incheon United",
+      "away": "FC Seoul",
+      "hs": 1,
+      "as_": 2
+    },
+    {
+      "id": 2921959,
+      "date": "2026-02-28T13:00:00+08:00",
+      "home_id": 480,
+      "away_id": 9945,
+      "home": "Ulsan HD FC",
+      "away": "Gangwon FC",
+      "hs": 3,
+      "as_": 1
+    },
+    {
+      "id": 2921960,
+      "date": "2026-02-28T15:30:00+08:00",
+      "home_id": 494,
+      "away_id": 481,
+      "home": "Gimcheon Sangmu FC",
+      "away": "Pohang Steelers",
+      "hs": 1,
+      "as_": 1
+    },
+    {
+      "id": 2921961,
+      "date": "2026-03-01T13:00:00+08:00",
+      "home_id": 484,
+      "away_id": 7800,
+      "home": "Jeonbuk Hyundai Motors",
+      "away": "Bucheon FC 1995",
+      "hs": 2,
+      "as_": 3
+    },
+    {
+      "id": 2921962,
+      "date": "2026-03-01T15:30:00+08:00",
+      "home_id": 4075,
+      "away_id": 16584,
+      "home": "Jeju SK FC",
+      "away": "Gwangju Football Club",
+      "hs": 0,
+      "as_": 0
+    },
+    {
+      "id": 2921963,
+      "date": "2026-03-02T13:00:00+08:00",
+      "home_id": 488,
+      "away_id": 21249,
+      "home": "Daejeon Citizen",
+      "away": "FC Anyang",
+      "hs": 1,
+      "as_": 1
+    },
+    {
+      "id": 2929563,
+      "date": "2026-03-07T15:30:00+08:00",
+      "home_id": 7800,
+      "away_id": 488,
+      "home": "Bucheon FC 1995",
+      "away": "Daejeon Citizen",
+      "hs": 1,
+      "as_": 1
+    },
+    {
+      "id": 2929564,
+      "date": "2026-03-07T15:30:00+08:00",
+      "home_id": 16584,
+      "away_id": 497,
+      "home": "Gwangju Football Club",
+      "away": "Incheon United",
+      "hs": 3,
+      "as_": 2
+    },
+    {
+      "id": 2929565,
+      "date": "2026-03-08T13:00:00+08:00",
+      "home_id": 494,
+      "away_id": 484,
+      "home": "Gimcheon Sangmu FC",
+      "away": "Jeonbuk Hyundai Motors",
+      "hs": 1,
+      "as_": 1
+    },
+    {
+      "id": 2929566,
+      "date": "2026-03-08T15:30:00+08:00",
+      "home_id": 21249,
+      "away_id": 4075,
+      "home": "FC Anyang",
+      "away": "Jeju SK FC",
+      "hs": 2,
+      "as_": 1
+    },
+    {
+      "id": 2929567,
+      "date": "2026-03-14T13:00:00+08:00",
+      "home_id": 16584,
+      "away_id": 484,
+      "home": "Gwangju Football Club",
+      "away": "Jeonbuk Hyundai Motors",
+      "hs": 0,
+      "as_": 0
+    },
+    {
+      "id": 2929568,
+      "date": "2026-03-14T15:30:00+08:00",
+      "home_id": 488,
+      "away_id": 494,
+      "home": "Daejeon Citizen",
+      "away": "Gimcheon Sangmu FC",
+      "hs": 1,
+      "as_": 1
+    },
+    {
+      "id": 2929569,
+      "date": "2026-03-15T13:00:00+08:00",
+      "home_id": 7800,
+      "away_id": 480,
+      "home": "Bucheon FC 1995",
+      "away": "Ulsan HD FC",
+      "hs": 1,
+      "as_": 2
+    },
+    {
+      "id": 2929570,
+      "date": "2026-03-15T13:00:00+08:00",
+      "home_id": 4075,
+      "away_id": 741,
+      "home": "Jeju SK FC",
+      "away": "FC Seoul",
+      "hs": 1,
+      "as_": 2
+    },
+    {
+      "id": 2929571,
+      "date": "2026-03-15T15:30:00+08:00",
+      "home_id": 9945,
+      "away_id": 21249,
+      "home": "Gangwon FC",
+      "away": "FC Anyang",
+      "hs": 1,
+      "as_": 1
+    },
+    {
+      "id": 2929572,
+      "date": "2026-03-15T15:30:00+08:00",
+      "home_id": 481,
+      "away_id": 497,
+      "home": "Pohang Steelers",
+      "away": "Incheon United",
+      "hs": 1,
+      "as_": 1
+    },
+    {
+      "id": 2929573,
+      "date": "2026-03-17T18:30:00+08:00",
+      "home_id": 494,
+      "away_id": 16584,
+      "home": "Gimcheon Sangmu FC",
+      "away": "Gwangju Football Club",
+      "hs": 1,
+      "as_": 1
+    },
+    {
+      "id": 2929574,
+      "date": "2026-03-18T18:30:00+08:00",
+      "home_id": 7800,
+      "away_id": 9945,
+      "home": "Bucheon FC 1995",
+      "away": "Gangwon FC",
+      "hs": 0,
+      "as_": 0
+    },
+    {
+      "id": 2929575,
+      "date": "2026-03-18T18:30:00+08:00",
+      "home_id": 497,
+      "away_id": 488,
+      "home": "Incheon United",
+      "away": "Daejeon Citizen",
+      "hs": 1,
+      "as_": 3
+    },
+    {
+      "id": 2929576,
+      "date": "2026-03-18T18:30:00+08:00",
+      "home_id": 4075,
+      "away_id": 480,
+      "home": "Jeju SK FC",
+      "away": "Ulsan HD FC",
+      "hs": 0,
+      "as_": 2
+    },
+    {
+      "id": 2929577,
+      "date": "2026-03-18T18:30:00+08:00",
+      "home_id": 484,
+      "away_id": 21249,
+      "home": "Jeonbuk Hyundai Motors",
+      "away": "FC Anyang",
+      "hs": 2,
+      "as_": 1
+    },
+    {
+      "id": 2929578,
+      "date": "2026-03-18T18:30:00+08:00",
+      "home_id": 481,
+      "away_id": 741,
+      "home": "Pohang Steelers",
+      "away": "FC Seoul",
+      "hs": 0,
+      "as_": 1
+    },
+    {
+      "id": 2929579,
+      "date": "2026-03-21T13:00:00+08:00",
+      "home_id": 488,
+      "away_id": 484,
+      "home": "Daejeon Citizen",
+      "away": "Jeonbuk Hyundai Motors",
+      "hs": 0,
+      "as_": 1
+    },
+    {
+      "id": 2929580,
+      "date": "2026-03-22T13:00:00+08:00",
+      "home_id": 741,
+      "away_id": 16584,
+      "home": "FC Seoul",
+      "away": "Gwangju Football Club",
+      "hs": 5,
+      "as_": 0
+    },
+    {
+      "id": 2929581,
+      "date": "2026-03-22T13:00:00+08:00",
+      "home_id": 480,
+      "away_id": 494,
+      "home": "Ulsan HD FC",
+      "away": "Gimcheon Sangmu FC",
+      "hs": 0,
+      "as_": 0
+    },
+    {
+      "id": 2929582,
+      "date": "2026-03-22T15:30:00+08:00",
+      "home_id": 21249,
+      "away_id": 497,
+      "home": "FC Anyang",
+      "away": "Incheon United",
+      "hs": 0,
+      "as_": 1
+    },
+    {
+      "id": 2929583,
+      "date": "2026-03-22T15:30:00+08:00",
+      "home_id": 9945,
+      "away_id": 4075,
+      "home": "Gangwon FC",
+      "away": "Jeju SK FC",
+      "hs": 1,
+      "as_": 1
+    },
+    {
+      "id": 2929584,
+      "date": "2026-03-22T15:30:00+08:00",
+      "home_id": 481,
+      "away_id": 7800,
+      "home": "Pohang Steelers",
+      "away": "Bucheon FC 1995",
+      "hs": 0,
+      "as_": 0
+    },
+    {
+      "id": 2929561,
+      "date": "2026-03-28T14:00:00+08:00",
+      "home_id": 481,
+      "away_id": 9945,
+      "home": "Pohang Steelers",
+      "away": "Gangwon FC",
+      "hs": 1,
+      "as_": 0
+    },
+    {
+      "id": 2929585,
+      "date": "2026-04-04T13:00:00+08:00",
+      "home_id": 4075,
+      "away_id": 7800,
+      "home": "Jeju SK FC",
+      "away": "Bucheon FC 1995",
+      "hs": 1,
+      "as_": 0
+    },
+    {
+      "id": 2929586,
+      "date": "2026-04-04T13:00:00+08:00",
+      "home_id": 484,
+      "away_id": 480,
+      "home": "Jeonbuk Hyundai Motors",
+      "away": "Ulsan HD FC",
+      "hs": 2,
+      "as_": 0
+    },
+    {
+      "id": 2929587,
+      "date": "2026-04-04T15:30:00+08:00",
+      "home_id": 9945,
+      "away_id": 16584,
+      "home": "Gangwon FC",
+      "away": "Gwangju Football Club",
+      "hs": 3,
+      "as_": 0
+    },
+    {
+      "id": 2929588,
+      "date": "2026-04-04T15:30:00+08:00",
+      "home_id": 481,
+      "away_id": 488,
+      "home": "Pohang Steelers",
+      "away": "Daejeon Citizen",
+      "hs": 1,
+      "as_": 0
+    },
+    {
+      "id": 2929589,
+      "date": "2026-04-05T13:00:00+08:00",
+      "home_id": 21249,
+      "away_id": 741,
+      "home": "FC Anyang",
+      "away": "FC Seoul",
+      "hs": 1,
+      "as_": 1
+    },
+    {
+      "id": 2929590,
+      "date": "2026-04-05T15:30:00+08:00",
+      "home_id": 497,
+      "away_id": 494,
+      "home": "Incheon United",
+      "away": "Gimcheon Sangmu FC",
+      "hs": 2,
+      "as_": 1
+    },
+    {
+      "id": 2929591,
+      "date": "2026-04-11T13:00:00+08:00",
+      "home_id": 481,
+      "away_id": 4075,
+      "home": "Pohang Steelers",
+      "away": "Jeju SK FC",
+      "hs": 0,
+      "as_": 2
+    },
+    {
+      "id": 2929592,
+      "date": "2026-04-11T13:00:00+08:00",
+      "home_id": 741,
+      "away_id": 484,
+      "home": "FC Seoul",
+      "away": "Jeonbuk Hyundai Motors",
+      "hs": 1,
+      "as_": 0
+    },
+    {
+      "id": 2929593,
+      "date": "2026-04-11T15:30:00+08:00",
+      "home_id": 16584,
+      "away_id": 7800,
+      "home": "Gwangju Football Club",
+      "away": "Bucheon FC 1995",
+      "hs": 0,
+      "as_": 1
+    },
+    {
+      "id": 2929594,
+      "date": "2026-04-11T15:30:00+08:00",
+      "home_id": 497,
+      "away_id": 480,
+      "home": "Incheon United",
+      "away": "Ulsan HD FC",
+      "hs": 1,
+      "as_": 2
+    },
+    {
+      "id": 2929595,
+      "date": "2026-04-12T13:00:00+08:00",
+      "home_id": 488,
+      "away_id": 9945,
+      "home": "Daejeon Citizen",
+      "away": "Gangwon FC",
+      "hs": 0,
+      "as_": 2
+    },
+    {
+      "id": 2929596,
+      "date": "2026-04-12T15:30:00+08:00",
+      "home_id": 494,
+      "away_id": 21249,
+      "home": "Gimcheon Sangmu FC",
+      "away": "FC Anyang",
+      "hs": 1,
+      "as_": 1
+    },
+    {
+      "id": 2929562,
+      "date": "2026-04-15T18:30:00+08:00",
+      "home_id": 480,
+      "away_id": 741,
+      "home": "Ulsan HD FC",
+      "away": "FC Seoul",
+      "hs": 1,
+      "as_": 4
+    },
+    {
+      "id": 2929597,
+      "date": "2026-04-18T13:00:00+08:00",
+      "home_id": 9945,
+      "away_id": 484,
+      "home": "Gangwon FC",
+      "away": "Jeonbuk Hyundai Motors",
+      "hs": 1,
+      "as_": 1
+    },
+    {
+      "id": 2929598,
+      "date": "2026-04-18T13:00:00+08:00",
+      "home_id": 741,
+      "away_id": 488,
+      "home": "FC Seoul",
+      "away": "Daejeon Citizen",
+      "hs": 0,
+      "as_": 1
+    },
+    {
+      "id": 2929599,
+      "date": "2026-04-18T15:30:00+08:00",
+      "home_id": 7800,
+      "away_id": 497,
+      "home": "Bucheon FC 1995",
+      "away": "Incheon United",
+      "hs": 2,
+      "as_": 2
+    },
+    {
+      "id": 2929600,
+      "date": "2026-04-18T15:30:00+08:00",
+      "home_id": 4075,
+      "away_id": 494,
+      "home": "Jeju SK FC",
+      "away": "Gimcheon Sangmu FC",
+      "hs": 1,
+      "as_": 1
+    },
+    {
+      "id": 2929601,
+      "date": "2026-04-19T13:00:00+08:00",
+      "home_id": 480,
+      "away_id": 16584,
+      "home": "Ulsan HD FC",
+      "away": "Gwangju Football Club",
+      "hs": 5,
+      "as_": 1
+    },
+    {
+      "id": 2929602,
+      "date": "2026-04-19T15:30:00+08:00",
+      "home_id": 481,
+      "away_id": 21249,
+      "home": "Pohang Steelers",
+      "away": "FC Anyang",
+      "hs": 0,
+      "as_": 1
+    },
+    {
+      "id": 2929603,
+      "date": "2026-04-21T18:30:00+08:00",
+      "home_id": 494,
+      "away_id": 9945,
+      "home": "Gimcheon Sangmu FC",
+      "away": "Gangwon FC",
+      "hs": 0,
+      "as_": 3
+    },
+    {
+      "id": 2929604,
+      "date": "2026-04-21T18:30:00+08:00",
+      "home_id": 484,
+      "away_id": 497,
+      "home": "Jeonbuk Hyundai Motors",
+      "away": "Incheon United",
+      "hs": 1,
+      "as_": 2
+    },
+    {
+      "id": 2929605,
+      "date": "2026-04-21T18:30:00+08:00",
+      "home_id": 741,
+      "away_id": 7800,
+      "home": "FC Seoul",
+      "away": "Bucheon FC 1995",
+      "hs": 3,
+      "as_": 0
+    },
+    {
+      "id": 2929606,
+      "date": "2026-04-22T18:30:00+08:00",
+      "home_id": 21249,
+      "away_id": 480,
+      "home": "FC Anyang",
+      "away": "Ulsan HD FC",
+      "hs": 1,
+      "as_": 1
+    },
+    {
+      "id": 2929607,
+      "date": "2026-04-22T18:30:00+08:00",
+      "home_id": 488,
+      "away_id": 4075,
+      "home": "Daejeon Citizen",
+      "away": "Jeju SK FC",
+      "hs": 0,
+      "as_": 1
+    },
+    {
+      "id": 2929608,
+      "date": "2026-04-22T18:30:00+08:00",
+      "home_id": 481,
+      "away_id": 16584,
+      "home": "Pohang Steelers",
+      "away": "Gwangju Football Club",
+      "hs": 1,
+      "as_": 0
+    },
+    {
+      "id": 2929609,
+      "date": "2026-04-25T13:00:00+08:00",
+      "home_id": 9945,
+      "away_id": 741,
+      "home": "Gangwon FC",
+      "away": "FC Seoul",
+      "hs": 1,
+      "as_": 2
+    },
+    {
+      "id": 2929610,
+      "date": "2026-04-25T15:30:00+08:00",
+      "home_id": 7800,
+      "away_id": 494,
+      "home": "Bucheon FC 1995",
+      "away": "Gimcheon Sangmu FC",
+      "hs": 0,
+      "as_": 2
+    },
+    {
+      "id": 2929611,
+      "date": "2026-04-25T15:30:00+08:00",
+      "home_id": 497,
+      "away_id": 4075,
+      "home": "Incheon United",
+      "away": "Jeju SK FC",
+      "hs": 1,
+      "as_": 0
+    },
+    {
+      "id": 2929612,
+      "date": "2026-04-26T13:00:00+08:00",
+      "home_id": 484,
+      "away_id": 481,
+      "home": "Jeonbuk Hyundai Motors",
+      "away": "Pohang Steelers",
+      "hs": 3,
+      "as_": 2
+    },
+    {
+      "id": 2929613,
+      "date": "2026-04-26T15:30:00+08:00",
+      "home_id": 16584,
+      "away_id": 21249,
+      "home": "Gwangju Football Club",
+      "away": "FC Anyang",
+      "hs": 2,
+      "as_": 5
+    },
+    {
+      "id": 2929614,
+      "date": "2026-04-26T15:30:00+08:00",
+      "home_id": 480,
+      "away_id": 488,
+      "home": "Ulsan HD FC",
+      "away": "Daejeon Citizen",
+      "hs": 1,
+      "as_": 4
+    },
+    {
+      "id": 2929615,
+      "date": "2026-05-02T13:00:00+08:00",
+      "home_id": 741,
+      "away_id": 494,
+      "home": "FC Seoul",
+      "away": "Gimcheon Sangmu FC",
+      "hs": 2,
+      "as_": 3
+    },
+    {
+      "id": 2929616,
+      "date": "2026-05-02T13:00:00+08:00",
+      "home_id": 480,
+      "away_id": 481,
+      "home": "Ulsan HD FC",
+      "away": "Pohang Steelers",
+      "hs": 0,
+      "as_": 1
+    },
+    {
+      "id": 2929617,
+      "date": "2026-05-02T15:30:00+08:00",
+      "home_id": 497,
+      "away_id": 9945,
+      "home": "Incheon United",
+      "away": "Gangwon FC",
+      "hs": 0,
+      "as_": 1
+    },
+    {
+      "id": 2929618,
+      "date": "2026-05-02T15:30:00+08:00",
+      "home_id": 4075,
+      "away_id": 484,
+      "home": "Jeju SK FC",
+      "away": "Jeonbuk Hyundai Motors",
+      "hs": 0,
+      "as_": 2
+    },
+    {
+      "id": 2929619,
+      "date": "2026-05-02T18:00:00+08:00",
+      "home_id": 21249,
+      "away_id": 7800,
+      "home": "FC Anyang",
+      "away": "Bucheon FC 1995",
+      "hs": 0,
+      "as_": 1
+    },
+    {
+      "id": 2929620,
+      "date": "2026-05-02T18:00:00+08:00",
+      "home_id": 16584,
+      "away_id": 488,
+      "home": "Gwangju Football Club",
+      "away": "Daejeon Citizen",
+      "hs": 0,
+      "as_": 5
+    },
+    {
+      "id": 2929621,
+      "date": "2026-05-05T13:00:00+08:00",
+      "home_id": 7800,
+      "away_id": 4075,
+      "home": "Bucheon FC 1995",
+      "away": "Jeju SK FC",
+      "hs": 0,
+      "as_": 1
+    },
+    {
+      "id": 2929622,
+      "date": "2026-05-05T13:00:00+08:00",
+      "home_id": 484,
+      "away_id": 16584,
+      "home": "Jeonbuk Hyundai Motors",
+      "away": "Gwangju Football Club",
+      "hs": 4,
+      "as_": 0
+    },
+    {
+      "id": 2929623,
+      "date": "2026-05-05T15:30:00+08:00",
+      "home_id": 488,
+      "away_id": 497,
+      "home": "Daejeon Citizen",
+      "away": "Incheon United",
+      "hs": 0,
+      "as_": 0
+    },
+    {
+      "id": 2929624,
+      "date": "2026-05-05T15:30:00+08:00",
+      "home_id": 9945,
+      "away_id": 481,
+      "home": "Gangwon FC",
+      "away": "Pohang Steelers",
+      "hs": 1,
+      "as_": 1
+    },
+    {
+      "id": 2929625,
+      "date": "2026-05-05T15:30:00+08:00",
+      "home_id": 494,
+      "away_id": 480,
+      "home": "Gimcheon Sangmu FC",
+      "away": "Ulsan HD FC",
+      "hs": 1,
+      "as_": 2
+    },
+    {
+      "id": 2929626,
+      "date": "2026-05-05T18:00:00+08:00",
+      "home_id": 741,
+      "away_id": 21249,
+      "home": "FC Seoul",
+      "away": "FC Anyang",
+      "hs": 0,
+      "as_": 0
+    },
+    {
+      "id": 2929627,
+      "date": "2026-05-09T13:00:00+08:00",
+      "home_id": 4075,
+      "away_id": 741,
+      "home": "Jeju SK FC",
+      "away": "FC Seoul",
+      "hs": 2,
+      "as_": 1
+    },
+    {
+      "id": 2929628,
+      "date": "2026-05-09T15:30:00+08:00",
+      "home_id": 494,
+      "away_id": 497,
+      "home": "Gimcheon Sangmu FC",
+      "away": "Incheon United",
+      "hs": 0,
+      "as_": 3
+    },
+    {
+      "id": 2929629,
+      "date": "2026-05-09T15:30:00+08:00",
+      "home_id": 16584,
+      "away_id": 9945,
+      "home": "Gwangju Football Club",
+      "away": "Gangwon FC",
+      "hs": 0,
+      "as_": 0
+    },
+    {
+      "id": 2929630,
+      "date": "2026-05-09T18:00:00+08:00",
+      "home_id": 488,
+      "away_id": 481,
+      "home": "Daejeon Citizen",
+      "away": "Pohang Steelers",
+      "hs": 0,
+      "as_": 2
+    },
+    {
+      "id": 2929631,
+      "date": "2026-05-10T13:00:00+08:00",
+      "home_id": 480,
+      "away_id": 7800,
+      "home": "Ulsan HD FC",
+      "away": "Bucheon FC 1995",
+      "hs": 1,
+      "as_": 0
+    },
+    {
+      "id": 2929632,
+      "date": "2026-05-10T15:30:00+08:00",
+      "home_id": 21249,
+      "away_id": 484,
+      "home": "FC Anyang",
+      "away": "Jeonbuk Hyundai Motors",
+      "hs": 1,
+      "as_": 1
+    },
+    {
+      "id": 2929633,
+      "date": "2026-05-12T18:30:00+08:00",
+      "home_id": 9945,
+      "away_id": 488,
+      "home": "Gangwon FC",
+      "away": "Daejeon Citizen",
+      "hs": 2,
+      "as_": 0
+    },
+    {
+      "id": 2929634,
+      "date": "2026-05-12T18:30:00+08:00",
+      "home_id": 16584,
+      "away_id": 741,
+      "home": "Gwangju Football Club",
+      "away": "FC Seoul",
+      "hs": 0,
+      "as_": 1
+    },
+    {
+      "id": 2929635,
+      "date": "2026-05-12T18:30:00+08:00",
+      "home_id": 497,
+      "away_id": 481,
+      "home": "Incheon United",
+      "away": "Pohang Steelers",
+      "hs": 0,
+      "as_": 1
+    },
+    {
+      "id": 2929636,
+      "date": "2026-05-13T18:30:00+08:00",
+      "home_id": 21249,
+      "away_id": 494,
+      "home": "FC Anyang",
+      "away": "Gimcheon Sangmu FC",
+      "hs": 2,
+      "as_": 2
+    },
+    {
+      "id": 2929637,
+      "date": "2026-05-13T18:30:00+08:00",
+      "home_id": 7800,
+      "away_id": 484,
+      "home": "Bucheon FC 1995",
+      "away": "Jeonbuk Hyundai Motors",
+      "hs": 0,
+      "as_": 0
+    },
+    {
+      "id": 2929638,
+      "date": "2026-05-13T18:30:00+08:00",
+      "home_id": 480,
+      "away_id": 4075,
+      "home": "Ulsan HD FC",
+      "away": "Jeju SK FC",
+      "hs": 2,
+      "as_": 1
+    },
+    {
+      "id": 2929639,
+      "date": "2026-05-16T15:30:00+08:00",
+      "home_id": 488,
+      "away_id": 741,
+      "home": "Daejeon Citizen",
+      "away": "FC Seoul",
+      "hs": 1,
+      "as_": 2
+    },
+    {
+      "id": 2929640,
+      "date": "2026-05-16T18:00:00+08:00",
+      "home_id": 497,
+      "away_id": 16584,
+      "home": "Incheon United",
+      "away": "Gwangju Football Club",
+      "hs": 4,
+      "as_": 0
+    },
+    {
+      "id": 2929641,
+      "date": "2026-05-17T15:30:00+08:00",
+      "home_id": 4075,
+      "away_id": 21249,
+      "home": "Jeju SK FC",
+      "away": "FC Anyang",
+      "hs": 1,
+      "as_": 2
+    },
+    {
+      "id": 2929642,
+      "date": "2026-05-17T15:40:00+08:00",
+      "home_id": 484,
+      "away_id": 494,
+      "home": "Jeonbuk Hyundai Motors",
+      "away": "Gimcheon Sangmu FC",
+      "hs": 1,
+      "as_": 0
+    },
+    {
+      "id": 2929643,
+      "date": "2026-05-17T18:00:00+08:00",
+      "home_id": 7800,
+      "away_id": 481,
+      "home": "Bucheon FC 1995",
+      "away": "Pohang Steelers",
+      "hs": 2,
+      "as_": 0
+    },
+    {
+      "id": 2929644,
+      "date": "2026-05-17T18:00:00+08:00",
+      "home_id": 9945,
+      "away_id": 480,
+      "home": "Gangwon FC",
+      "away": "Ulsan HD FC",
+      "hs": 2,
+      "as_": 0
+    },
+    {
+      "id": 2929645,
+      "date": "2026-07-04T18:30:00+08:00",
+      "home_id": 21249,
+      "away_id": 481,
+      "home": "FC Anyang",
+      "away": "Pohang Steelers",
+      "hs": 2,
+      "as_": 3
+    },
+    {
+      "id": 2929646,
+      "date": "2026-07-04T18:30:00+08:00",
+      "home_id": 488,
+      "away_id": 7800,
+      "home": "Daejeon Citizen",
+      "away": "Bucheon FC 1995",
+      "hs": 2,
+      "as_": 2
+    },
+    {
+      "id": 2929647,
+      "date": "2026-07-04T18:30:00+08:00",
+      "home_id": 484,
+      "away_id": 9945,
+      "home": "Jeonbuk Hyundai Motors",
+      "away": "Gangwon FC",
+      "hs": 1,
+      "as_": 2
+    },
+    {
+      "id": 2929648,
+      "date": "2026-07-05T18:30:00+08:00",
+      "home_id": 494,
+      "away_id": 4075,
+      "home": "Gimcheon Sangmu FC",
+      "away": "Jeju SK FC",
+      "hs": 1,
+      "as_": 1
+    },
+    {
+      "id": 2929649,
+      "date": "2026-07-05T18:30:00+08:00",
+      "home_id": 16584,
+      "away_id": 480,
+      "home": "Gwangju Football Club",
+      "away": "Ulsan HD FC",
+      "hs": 1,
+      "as_": 1
+    },
+    {
+      "id": 2929650,
+      "date": "2026-07-05T18:30:00+08:00",
+      "home_id": 741,
+      "away_id": 497,
+      "home": "FC Seoul",
+      "away": "Incheon United",
+      "hs": 1,
+      "as_": 0
+    },
+    {
+      "id": 2929651,
+      "date": "2026-07-11T18:30:00+08:00",
+      "home_id": 494,
+      "away_id": 7800,
+      "home": "Gimcheon Sangmu FC",
+      "away": "Bucheon FC 1995",
+      "hs": 1,
+      "as_": 1
+    },
+    {
+      "id": 2929652,
+      "date": "2026-07-11T18:30:00+08:00",
+      "home_id": 16584,
+      "away_id": 481,
+      "home": "Gwangju Football Club",
+      "away": "Pohang Steelers",
+      "hs": 0,
+      "as_": 3
+    },
+    {
+      "id": 2929653,
+      "date": "2026-07-11T18:30:00+08:00",
+      "home_id": 480,
+      "away_id": 484,
+      "home": "Ulsan HD FC",
+      "away": "Jeonbuk Hyundai Motors",
+      "hs": 1,
+      "as_": 3
+    },
+    {
+      "id": 2929654,
+      "date": "2026-07-12T18:30:00+08:00",
+      "home_id": 497,
+      "away_id": 21249,
+      "home": "Incheon United",
+      "away": "FC Anyang",
+      "hs": 0,
+      "as_": 1
+    },
+    {
+      "id": 2929655,
+      "date": "2026-07-12T18:30:00+08:00",
+      "home_id": 4075,
+      "away_id": 488,
+      "home": "Jeju SK FC",
+      "away": "Daejeon Citizen",
+      "hs": 0,
+      "as_": 0
+    },
+    {
+      "id": 2929656,
+      "date": "2026-07-12T18:30:00+08:00",
+      "home_id": 741,
+      "away_id": 9945,
+      "home": "FC Seoul",
+      "away": "Gangwon FC",
+      "hs": 0,
+      "as_": 0
+    },
+    {
+      "id": 2929657,
+      "date": "2026-07-18T18:30:00+08:00",
+      "home_id": 488,
+      "away_id": 480,
+      "home": "Daejeon Citizen",
+      "away": "Ulsan HD FC",
+      "hs": 2,
+      "as_": 2
+    },
+    {
+      "id": 2929658,
+      "date": "2026-07-18T18:30:00+08:00",
+      "home_id": 9945,
+      "away_id": 494,
+      "home": "Gangwon FC",
+      "away": "Gimcheon Sangmu FC",
+      "hs": 2,
+      "as_": 0
+    },
+    {
+      "id": 2929659,
+      "date": "2026-07-18T18:30:00+08:00",
+      "home_id": 497,
+      "away_id": 484,
+      "home": "Incheon United",
+      "away": "Jeonbuk Hyundai Motors",
+      "hs": 1,
+      "as_": 0
+    },
+    {
+      "id": 2929660,
+      "date": "2026-07-18T18:30:00+08:00",
+      "home_id": 4075,
+      "away_id": 481,
+      "home": "Jeju SK FC",
+      "away": "Pohang Steelers",
+      "hs": 2,
+      "as_": 1
+    },
+    {
+      "id": 2929661,
+      "date": "2026-07-19T18:30:00+08:00",
+      "home_id": 21249,
+      "away_id": 16584,
+      "home": "FC Anyang",
+      "away": "Gwangju Football Club",
+      "hs": 1,
+      "as_": 1
+    },
+    {
+      "id": 2929662,
+      "date": "2026-07-19T18:30:00+08:00",
+      "home_id": 7800,
+      "away_id": 741,
+      "home": "Bucheon FC 1995",
+      "away": "FC Seoul",
+      "hs": 1,
+      "as_": 3
+    },
+    {
+      "id": 2929663,
+      "date": "2026-07-21T18:30:00+08:00",
+      "home_id": 4075,
+      "away_id": 9945,
+      "home": "Jeju SK FC",
+      "away": "Gangwon FC",
+      "hs": 1,
+      "as_": 1
+    },
+    {
+      "id": 2929664,
+      "date": "2026-07-21T18:30:00+08:00",
+      "home_id": 484,
+      "away_id": 488,
+      "home": "Jeonbuk Hyundai Motors",
+      "away": "Daejeon Citizen",
+      "hs": 0,
+      "as_": 0
+    },
+    {
+      "id": 2929665,
+      "date": "2026-07-21T18:30:00+08:00",
+      "home_id": 480,
+      "away_id": 497,
+      "home": "Ulsan HD FC",
+      "away": "Incheon United",
+      "hs": 1,
+      "as_": 2
+    },
+    {
+      "id": 2929666,
+      "date": "2026-07-22T18:30:00+08:00",
+      "home_id": 7800,
+      "away_id": 21249,
+      "home": "Bucheon FC 1995",
+      "away": "FC Anyang",
+      "hs": 2,
+      "as_": 3
+    },
+    {
+      "id": 2929667,
+      "date": "2026-07-22T18:30:00+08:00",
+      "home_id": 16584,
+      "away_id": 494,
+      "home": "Gwangju Football Club",
+      "away": "Gimcheon Sangmu FC",
+      "hs": 1,
+      "as_": 1
+    },
+    {
+      "id": 2929668,
+      "date": "2026-07-22T18:30:00+08:00",
+      "home_id": 741,
+      "away_id": 481,
+      "home": "FC Seoul",
+      "away": "Pohang Steelers",
+      "hs": 3,
+      "as_": 1
+    },
+    {
+      "id": 2929669,
+      "date": "2026-07-25T18:30:00+08:00",
+      "home_id": 494,
+      "away_id": 488,
+      "home": "Gimcheon Sangmu FC",
+      "away": "Daejeon Citizen",
+      "hs": 3,
+      "as_": 2
+    },
+    {
+      "id": 2929670,
+      "date": "2026-07-25T18:30:00+08:00",
+      "home_id": 481,
+      "away_id": 484,
+      "home": "Pohang Steelers",
+      "away": "Jeonbuk Hyundai Motors",
+      "hs": 0,
+      "as_": 2
+    },
+    {
+      "id": 2929671,
+      "date": "2026-07-26T18:30:00+08:00",
+      "home_id": 21249,
+      "away_id": 9945,
+      "home": "FC Anyang",
+      "away": "Gangwon FC",
+      "hs": 2,
+      "as_": 1
+    },
+    {
+      "id": 2929672,
+      "date": "2026-07-26T18:30:00+08:00",
+      "home_id": 16584,
+      "away_id": 4075,
+      "home": "Gwangju Football Club",
+      "away": "Jeju SK FC",
+      "hs": 1,
+      "as_": 2
+    },
+    {
+      "id": 2929673,
+      "date": "2026-07-26T18:30:00+08:00",
+      "home_id": 497,
+      "away_id": 7800,
+      "home": "Incheon United",
+      "away": "Bucheon FC 1995",
+      "hs": 1,
+      "as_": 1
+    },
+    {
+      "id": 2929674,
+      "date": "2026-07-26T18:30:00+08:00",
+      "home_id": 741,
+      "away_id": 480,
+      "home": "FC Seoul",
+      "away": "Ulsan HD FC",
+      "hs": 1,
+      "as_": 3
+    },
+    {
+      "id": 2929675,
+      "date": "2026-08-01T18:30:00+08:00",
+      "home_id": 9945,
+      "away_id": 7800,
+      "home": "Gangwon FC",
+      "away": "Bucheon FC 1995",
+      "hs": 0,
+      "as_": 3
+    },
+    {
+      "id": 2929676,
+      "date": "2026-08-01T18:30:00+08:00",
+      "home_id": 484,
+      "away_id": 741,
+      "home": "Jeonbuk Hyundai Motors",
+      "away": "FC Seoul",
+      "hs": 0,
+      "as_": 0
+    },
+    {
+      "id": 2929677,
+      "date": "2026-08-01T18:30:00+08:00",
+      "home_id": 481,
+      "away_id": 494,
+      "home": "Pohang Steelers",
+      "away": "Gimcheon Sangmu FC",
+      "hs": 0,
+      "as_": 1
+    },
+    {
+      "id": 2929678,
+      "date": "2026-08-02T18:30:00+08:00",
+      "home_id": 488,
+      "away_id": 16584,
+      "home": "Daejeon Citizen",
+      "away": "Gwangju Football Club",
+      "hs": 2,
+      "as_": 0
+    },
+    {
+      "id": 2929679,
+      "date": "2026-08-02T18:30:00+08:00",
+      "home_id": 4075,
+      "away_id": 497,
+      "home": "Jeju SK FC",
+      "away": "Incheon United",
+      "hs": 3,
+      "as_": 3
+    },
+    {
+      "id": 2929680,
+      "date": "2026-08-02T18:30:00+08:00",
+      "home_id": 480,
+      "away_id": 21249,
+      "home": "Ulsan HD FC",
+      "away": "FC Anyang",
+      "hs": 3,
+      "as_": 1
+    },
+    {
+      "id": 2929681,
+      "date": "2026-08-08T19:00:00+08:00",
+      "home_id": 21249,
+      "away_id": 488,
+      "home": "FC Anyang",
+      "away": "Daejeon Citizen",
+      "hs": 1,
+      "as_": 2
+    },
+    {
+      "id": 2929682,
+      "date": "2026-08-08T19:00:00+08:00",
+      "home_id": 7800,
+      "away_id": 16584,
+      "home": "Bucheon FC 1995",
+      "away": "Gwangju Football Club",
+      "hs": 0,
+      "as_": 0
+    },
+    {
+      "id": 2929684,
+      "date": "2026-08-08T19:00:00+08:00",
+      "home_id": 494,
+      "away_id": 741,
+      "home": "Gimcheon Sangmu FC",
+      "away": "FC Seoul",
+      "hs": 0,
+      "as_": 0
+    },
+    {
+      "id": 2929685,
+      "date": "2026-08-08T19:00:00+08:00",
+      "home_id": 484,
+      "away_id": 4075,
+      "home": "Jeonbuk Hyundai Motors",
+      "away": "Jeju SK FC",
+      "hs": 1,
+      "as_": 3
+    },
+    {
+      "id": 2929686,
+      "date": "2026-08-08T19:00:00+08:00",
+      "home_id": 481,
+      "away_id": 480,
+      "home": "Pohang Steelers",
+      "away": "Ulsan HD FC",
+      "hs": 0,
+      "as_": 2
+    },
+    {
+      "id": 2929687,
+      "date": "2026-08-15T18:30:00+08:00",
+      "home_id": 16584,
+      "away_id": 481,
+      "home": "Gwangju Football Club",
+      "away": "Pohang Steelers",
+      "hs": 1,
+      "as_": 2
+    },
+    {
+      "id": 2929688,
+      "date": "2026-08-15T18:30:00+08:00",
+      "home_id": 4075,
+      "away_id": 21249,
+      "home": "Jeju SK FC",
+      "away": "FC Anyang",
+      "hs": 2,
+      "as_": 0
+    },
+    {
+      "id": 2929689,
+      "date": "2026-08-15T18:30:00+08:00",
+      "home_id": 741,
+      "away_id": 488,
+      "home": "FC Seoul",
+      "away": "Daejeon Citizen",
+      "hs": 4,
+      "as_": 2
+    },
+    {
+      "id": 2929690,
+      "date": "2026-08-16T18:30:00+08:00",
+      "home_id": 7800,
+      "away_id": 484,
+      "home": "Bucheon FC 1995",
+      "away": "Jeonbuk Hyundai Motors",
+      "hs": 3,
+      "as_": 2
+    },
+    {
+      "id": 2929691,
+      "date": "2026-08-16T18:30:00+08:00",
+      "home_id": 497,
+      "away_id": 494,
+      "home": "Incheon United",
+      "away": "Gimcheon Sangmu FC",
+      "hs": 1,
+      "as_": 1
+    },
+    {
+      "id": 2929692,
+      "date": "2026-08-16T18:30:00+08:00",
+      "home_id": 480,
+      "away_id": 9945,
+      "home": "Ulsan HD FC",
+      "away": "Gangwon FC",
+      "hs": 2,
+      "as_": 3
+    },
+    {
+      "id": 2929693,
+      "date": "2026-08-22T18:30:00+08:00",
+      "home_id": 21249,
+      "away_id": 741,
+      "home": "FC Anyang",
+      "away": "FC Seoul",
+      "hs": 0,
+      "as_": 7
+    },
+    {
+      "id": 2929694,
+      "date": "2026-08-22T18:30:00+08:00",
+      "home_id": 4075,
+      "away_id": 494,
+      "home": "Jeju SK FC",
+      "away": "Gimcheon Sangmu FC",
+      "hs": 0,
+      "as_": 0
+    },
+    {
+      "id": 2929695,
+      "date": "2026-08-22T18:30:00+08:00",
+      "home_id": 484,
+      "away_id": 480,
+      "home": "Jeonbuk Hyundai Motors",
+      "away": "Ulsan HD FC",
+      "hs": 1,
+      "as_": 0
+    },
+    {
+      "id": 2929696,
+      "date": "2026-08-22T18:30:00+08:00",
+      "home_id": 7800,
+      "away_id": 481,
+      "home": "Bucheon FC 1995",
+      "away": "Pohang Steelers",
+      "hs": 3,
+      "as_": 0
+    },
+    {
+      "id": 2929697,
+      "date": "2026-08-23T18:30:00+08:00",
+      "home_id": 488,
+      "away_id": 9945,
+      "home": "Daejeon Citizen",
+      "away": "Gangwon FC",
+      "hs": 3,
+      "as_": 0
+    },
+    {
+      "id": 2929698,
+      "date": "2026-08-23T18:30:00+08:00",
+      "home_id": 16584,
+      "away_id": 497,
+      "home": "Gwangju Football Club",
+      "away": "Incheon United",
+      "hs": 0,
+      "as_": 1
+    },
+    {
+      "id": 2929699,
+      "date": "2026-08-25T18:30:00+08:00",
+      "home_id": 494,
+      "away_id": 484,
+      "home": "Gimcheon Sangmu FC",
+      "away": "Jeonbuk Hyundai Motors",
+      "hs": 0,
+      "as_": 0
+    },
+    {
+      "id": 2929700,
+      "date": "2026-08-25T18:30:00+08:00",
+      "home_id": 4075,
+      "away_id": 481,
+      "home": "Jeju SK FC",
+      "away": "Pohang Steelers",
+      "hs": 1,
+      "as_": 2
+    },
+    {
+      "id": 2929701,
+      "date": "2026-08-25T18:30:00+08:00",
+      "home_id": 741,
+      "away_id": 7800,
+      "home": "FC Seoul",
+      "away": "Bucheon FC 1995",
+      "hs": 1,
+      "as_": 0
+    },
+    {
+      "id": 2929702,
+      "date": "2026-08-26T18:30:00+08:00",
+      "home_id": 21249,
+      "away_id": 497,
+      "home": "FC Anyang",
+      "away": "Incheon United",
+      "hs": 2,
+      "as_": 1
+    },
+    {
+      "id": 2929703,
+      "date": "2026-08-26T18:30:00+08:00",
+      "home_id": 488,
+      "away_id": 480,
+      "home": "Daejeon Citizen",
+      "away": "Ulsan HD FC",
+      "hs": 2,
+      "as_": 1
+    },
+    {
+      "id": 2929704,
+      "date": "2026-08-26T18:30:00+08:00",
+      "home_id": 9945,
+      "away_id": 16584,
+      "home": "Gangwon FC",
+      "away": "Gwangju Football Club",
+      "hs": 2,
+      "as_": 2
+    },
+    {
+      "id": 2929705,
+      "date": "2026-08-29T18:30:00+08:00",
+      "home_id": 7800,
+      "away_id": 21249,
+      "home": "Bucheon FC 1995",
+      "away": "FC Anyang",
+      "hs": 1,
+      "as_": 1
+    },
+    {
+      "id": 2929706,
+      "date": "2026-08-29T18:30:00+08:00",
+      "home_id": 480,
+      "away_id": 494,
+      "home": "Ulsan HD FC",
+      "away": "Gimcheon Sangmu FC",
+      "hs": 3,
+      "as_": 1
+    },
+    {
+      "id": 2929707,
+      "date": "2026-08-30T18:30:00+08:00",
+      "home_id": 16584,
+      "away_id": 741,
+      "home": "Gwangju Football Club",
+      "away": "FC Seoul",
+      "hs": 2,
+      "as_": 5
+    },
+    {
+      "id": 2929708,
+      "date": "2026-08-30T18:30:00+08:00",
+      "home_id": 497,
+      "away_id": 484,
+      "home": "Incheon United",
+      "away": "Jeonbuk Hyundai Motors",
+      "hs": 1,
+      "as_": 1
+    },
+    {
+      "id": 2929709,
+      "date": "2026-08-30T18:30:00+08:00",
+      "home_id": 4075,
+      "away_id": 488,
+      "home": "Jeju SK FC",
+      "away": "Daejeon Citizen",
+      "hs": 3,
+      "as_": 1
+    },
+    {
+      "id": 2929710,
+      "date": "2026-08-30T18:30:00+08:00",
+      "home_id": 9945,
+      "away_id": 481,
+      "home": "Gangwon FC",
+      "away": "Pohang Steelers",
+      "hs": 0,
+      "as_": 0
+    },
+    {
+      "id": 2929711,
+      "date": "2026-09-05T18:00:00+08:00",
+      "home_id": 7800,
+      "away_id": 488,
+      "home": "Bucheon FC 1995",
+      "away": "Daejeon Citizen",
+      "hs": 0,
+      "as_": 5
+    },
+    {
+      "id": 2929712,
+      "date": "2026-09-05T18:00:00+08:00",
+      "home_id": 4075,
+      "away_id": 480,
+      "home": "Jeju SK FC",
+      "away": "Ulsan HD FC",
+      "hs": 0,
+      "as_": 0
+    },
+    {
+      "id": 2929713,
+      "date": "2026-09-05T18:00:00+08:00",
+      "home_id": 484,
+      "away_id": 481,
+      "home": "Jeonbuk Hyundai Motors",
+      "away": "Pohang Steelers",
+      "hs": 2,
+      "as_": 0
+    },
+    {
+      "id": 2929714,
+      "date": "2026-09-05T18:00:00+08:00",
+      "home_id": 741,
+      "away_id": 497,
+      "home": "FC Seoul",
+      "away": "Incheon United",
+      "hs": 1,
+      "as_": 0
+    },
+    {
+      "id": 2929715,
+      "date": "2026-09-06T18:00:00+08:00",
+      "home_id": 21249,
+      "away_id": 9945,
+      "home": "FC Anyang",
+      "away": "Gangwon FC",
+      "hs": 0,
+      "as_": 3
+    },
+    {
+      "id": 2929716,
+      "date": "2026-09-06T18:00:00+08:00",
+      "home_id": 494,
+      "away_id": 16584,
+      "home": "Gimcheon Sangmu FC",
+      "away": "Gwangju Football Club",
+      "hs": 2,
+      "as_": 2
+    },
+    {
+      "id": 2929717,
+      "date": "2026-09-08T18:30:00+08:00",
+      "home_id": 497,
+      "away_id": 7800,
+      "home": "Incheon United",
+      "away": "Bucheon FC 1995",
+      "hs": 2,
+      "as_": 1
+    },
+    {
+      "id": 2929718,
+      "date": "2026-09-08T18:30:00+08:00",
+      "home_id": 480,
+      "away_id": 741,
+      "home": "Ulsan HD FC",
+      "away": "FC Seoul",
+      "hs": 1,
+      "as_": 0
+    },
+    {
+      "id": 2929719,
+      "date": "2026-09-09T18:30:00+08:00",
+      "home_id": 488,
+      "away_id": 21249,
+      "home": "Daejeon Citizen",
+      "away": "FC Anyang",
+      "hs": 3,
+      "as_": 2
+    },
+    {
+      "id": 2929720,
+      "date": "2026-09-09T18:30:00+08:00",
+      "home_id": 9945,
+      "away_id": 484,
+      "home": "Gangwon FC",
+      "away": "Jeonbuk Hyundai Motors",
+      "hs": 1,
+      "as_": 1
+    },
+    {
+      "id": 2929721,
+      "date": "2026-09-09T18:30:00+08:00",
+      "home_id": 16584,
+      "away_id": 4075,
+      "home": "Gwangju Football Club",
+      "away": "Jeju SK FC",
+      "hs": 0,
+      "as_": 1
+    },
+    {
+      "id": 2929722,
+      "date": "2026-09-09T18:30:00+08:00",
+      "home_id": 481,
+      "away_id": 494,
+      "home": "Pohang Steelers",
+      "away": "Gimcheon Sangmu FC",
+      "hs": 0,
+      "as_": 0
+    }
+  ]
+}

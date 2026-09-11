@@ -1,0 +1,23 @@
+{
+  "15": {
+    "name": "K League 1",
+    "season": "2026",
+    "n_matches": 167,
+    "n_teams": 12,
+    "file": "C:\\Users\\Administrator\\Desktop\\zpp\\league_data\\K_League_1_15.json"
+  },
+  "25": {
+    "name": "Japan J1 League",
+    "season": "2026",
+    "n_matches": 180,
+    "n_teams": 20,
+    "file": "C:\\Users\\Administrator\\Desktop\\zpp\\league_data\\Japan_J1_League_25.json"
+  },
+  "36": {
+    "name": "English Premier League",
+    "season": "2025-2026+2026-2027",
+    "n_matches": 410,
+    "n_teams": 23,
+    "file": "C:\\Users\\Administrator\\Desktop\\zpp\\league_data\\English_Premier_League_36.json"
+  }
+}
