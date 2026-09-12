@@ -842,3 +842,142 @@ Brier score/ECE对比基线,而不是单看单调梯度。
 本身做校准(比如isotonic regression或Platt scaling这类标准的post-hoc校准方法,把模型输出的
 原始分数重新映射到"跟实际命中率对齐"的概率),而不是继续调整composite的权重结构——权重
 调整改变的是方向判断,不直接解决"数字本身报得准不准"这个校准问题。
+
+---
+
+## 2026-09-12 大小球市场公众"压大"偏好的真实证据 + 一个成本更低、真正独立于赔率的进球代理信号(shots/corners评级)
+
+### 为什么研究这个
+
+笔记里有两处直接相关但都留了明显缺口:(1) "水位一致性对'大'方向有效、对'小'方向基本无效",
+原因写的是"初步判断……散户天然偏爱押大球",**没有引用任何文献,是本项目自己的猜测**;
+(2) 9-11续2那条"元结论"说重新组合现有盘口信号已经碰到理论天花板,真正可能有增量信息的
+只剩"独立数据源(完整联赛赛程,喂给真Dixon-Coles)"和"更早于盘口的信息(伤停/阵容)"两条
+路——但9-11续3已经测过第一条路,成本高(需要整赛季逐场比分)且这次三个联赛全部落空。
+这次定向查了两件事:大小球公众下注偏好到底有没有真实数据支撑(而不是猜测),以及有没有
+一个介于"重新切分盘口"和"抓整赛季比分做全联赛联合MLE"之间的、成本更低但仍然独立于赔率
+本身的进球信息代理。两个问题查到的文献恰好能连起来看,所以写在同一节。
+
+### Part A: 压"大"偏好——真实下注量数据,而不是猜测
+
+**Flepp, R., Nüesch, S. & Franck, E. (2016). "Does Bettor Sentiment Affect Bookmaker
+Pricing?" *Journal of Sports Economics*, 17(1), 3-11.** 这篇直接用博彩公司的真实下注量
+数据(不是赛果、也不是赔率反推,是实打实的volume)研究大小球2.5球市场:
+
+- **数据**:全球4,491场比赛(220个不同联赛/赛事,2011年11月1日-12月7日),赔率来自
+  oddsportal.com,剔除372场对不上赔率的比赛后最终样本4,119场——覆盖220个联赛这一点
+  值得注意,比五大联赛单一联赛的研究更接近本项目"大量中小/非顶级联赛"的数据结构。
+- **发现1(压大偏好,比笔记原有猜测严重得多)**:平均一场比赛,压"大2.5球"的下注量占比
+  **超过80%**——不是"略多",是压倒性一边倒,作者给的解释是"给高比分比赛加油助威天然比押
+  '不进球'更有吸引力"。这条**用真实volume数据支持了**笔记里"散户天然偏爱押大"这个此前
+  没有引用来源的判断,而且量级比想象的更极端。
+- **发现2(但这个偏好没能转化成可利用的定价漏洞)**:即使下注量失衡到这个程度,论文**没有
+  发现**这个失衡对应任何系统性的"大/小"回报率偏差——押大和押小的长期回报率没有显著不同。
+  作者的解释是价格透明度太高(玩家能轻易跨庄家比价),约束了庄家去系统性利用这种情绪定价。
+- **对本项目的意义,修正而非单纯支持**:这条结果**部分支持、部分修正**了笔记原有的判断——
+  支持"公众确实系统性偏大"这个事实本身(有真实volume数据、量级比猜测更极端);但**修正**了
+  隐含的推论"所以小方向应该有隐藏的价值"——真实证据说明即使volume偏得这么离谱,pricing
+  依然没有系统性偏差留给下注者去捡。这和笔记里已经验证过的两条负结果其实是同一个机制的
+  两次重复出现:"六庄一致偏小反买大球没有优势"、"水位一致性对小方向基本无效"——**光凭
+  "大家都在押哪一边"这个信息本身,推不出"另一边有value"这个结论,除非能额外证明这一场/
+  这批公司的定价确实没跟上真实概率(比如笔记里已经在用的CLV检验),不能停在"下注量不对称"
+  这一步就下结论。**
+- **交叉证据(方向性参考,不直接引用为足球市场证据)**:Paul & Weinbach (2002, *Journal
+  of Sports Economics*)在NFL大小球市场发现,当盘口总分显著高于联赛均值(高5/6/7分以上)时,
+  反向买"小"的策略能拒绝"公平赌注"的原假设,虽然全样本层面拒绝不了;Woodland & Woodland
+  (2010, *Economics Bulletin* 30(4), 3122-3127)在NHL总进球≥5.5的大小球上测出"小"整体
+  胜率54.2%(p=0.00075,显著)。这两篇都是北美职业联赛(橄榄球/冰球),不能直接套到足球,
+  但提供一个跨运动一致的模式:**"盘口总分显著偏离该类赛事历史均值"这个子集,比不区分盘口
+  高低的全样本更可能留下可利用空间**——这提示以后如果还想深挖大小球方向性偏差,值得先按
+  "盘口相对该联赛/赛事类型历史均值的偏离程度"分组,而不是像笔记里已经测过的"全票一致/
+  偏离幅度/参与公司数"那样在同一份漂移信号上继续切法(那几种切法已经证明测不出稳定优势)。
+
+### Part B: 有没有比"抓整赛季逐场比分做真Dixon-Coles"成本更低、又真正独立于赔率的进球代理?
+
+**Wheatcroft, E. (2020). "A profitable model for predicting the over/under market in
+football." *International Journal of Forecasting*, 36(3), 916-932.**(方法学姊妹篇:
+Wheatcroft, "Forecasting football matches by predicting match statistics", arXiv
+2001.09097 / *Journal of Sports Analytics*, 2021)提出了**GAP(Generalised Attacking
+Performance)评级**,核心思路和本节要回答的问题正好对上:
+
+- **方法**:每支球队维护四个动态评级(主场进攻、主场防守、客场进攻、客场防守),每场赛后
+  按"实际观测值 vs 评级预期值"的差距更新——结构上类似Elo/Dixon-Coles的动态更新机制,但
+  **更新用的输入不是进球数,而是射门数/射正数/角球数这类比赛过程统计量**。用这些评级预测
+  下一场的比赛统计量,再把预测的统计量转换成大小球2.5球概率。
+- **关键结果**:在10个欧洲联赛、12年数据上测试,**用射门数+角球数(不用进球数本身)作为
+  评级输入,比用进球数本身作为输入的预测力更强**;用这个信号做平水价值投注,总计约68,672
+  注上取得约0.8%的平均利润率。
+- **机制解释**:进球本身受"射正之后进不进"这种高方差的临门一脚运气影响,而射门数/射正数/
+  角球数是更高频、更低噪声的观测量(一场比赛可能只有1-2个进球,但可能有10-20次射门)——
+  用它们代替进球数去估计球队真实攻防强度,收敛更快、需要的样本更小。**这正好直接对应笔记
+  "Dixon-Coles续3"那节记录的已知实操坑#2(K联赛125场对12队24+2参数的联合MLE,小样本
+  容易过度自信)——shots-based评级是缓解同一个"小样本估计球队真实强度"问题的另一条路,
+  不需要先解决"能不能抓到完整联赛逐场比分"这个更大的数据工程问题就能试。**
+- **和xG方法论的关系(直接回应任务里提到的xG方向)**:真正的xG(基于射门位置/角度/身体
+  部位/防守压迫构建的shot quality模型)需要逐次射门的位置和情境数据,这类数据通常只有
+  Opta/StatsBomb这类商业数据商为顶级联赛提供,本项目覆盖的K联赛/日职联/青年队/卡塔尔
+  联赛/乌兹别克联赛这类中小赛事基本不可能拿到——**完整xG模型对本项目不现实,不建议往这个
+  方向投入。GAP评级本质上是"xG的简化替代品":用射门数量/角球数量这种粗粒度统计量代替射门
+  质量,数据门槛低得多,更适合本项目的数据结构。**
+- **信息可靠性的诚实说明(重要)**:ScienceDirect、arXiv、SAGE(journals.sagepub.com)、
+  LSE eprints、ResearchGate、Semantic Scholar、zora.uzh.ch、sonar.ch这几个域名**这次
+  全部被当前环境的出站代理拦截**,无法直接WebFetch原文核实。上面GAP评级的更新机制、概率
+  转换方式(是否用泊松分布、如何把预测的比赛统计量映射回进球分布)、68,672注/0.8%这两个
+  数字,**都只是通过搜索引擎(WebSearch)返回的摘要交叉印证得到的,不是拿到论文原文核实过
+  的**——和笔记"Dixon-Coles"那节遇到同样的代理拦截问题时的处理方式一致,如实标注,不代表
+  可以直接当成精确公式或最终数字去写实现代码,以后有条件访问原文时应该重新核实一遍,尤其是
+  评级更新公式的具体参数和"两种价值投注策略"的具体定义。
+
+### 与本仓库数据的对应关系:接入前的数据缺口
+
+确认:`nowgoal_collect.py`和`v8_backtest_pipeline.py`目前**完全没有采集任何比赛过程统计量**
+(射门/射正/角球/控球率一类字段)——`fetch_h2h_html()`/`parse_h2h_standings()`只抓
+Total/Home/Away/Last6四行的"场次-进球-失球-名次"汇总(与前面Dixon-Coles那节记录的数据
+结构相同),不涉及射门/角球。搜索引擎摘要显示nowgoal通用平台"提供射门、角球等详细赛况
+统计",但这是对该网站的泛泛描述,**不是针对本项目实际覆盖的联赛/赛事(K联赛、日职联、
+青年队赛事、卡塔尔联赛、乌兹别克联赛)历史页面逐一核实过的**,不能假设覆盖率和五大联赛
+一样高——参照笔记"薄市场"那节的教训,青年队/小联赛比赛很可能同时缺进球历史和缺射门统计,
+解决了一个数据缺口不代表自动解决另一个。接入建议分层:
+
+1. **低成本、可以先做、纯确认性质**:挑1-2个本数据集里覆盖场次多的联赛(不是U19这种小众
+   赛事),像当初核实Dixon-Coles联赛JSON接口那样,实际打开nowgoal的比赛详情历史页面,
+   确认射门/射正/角球是否有逐场记录、能否批量抓取。如果连这一步数据都拿不到,后面不用
+   往下做。
+2. **中等成本、独立脚本、不改v8主逻辑**:如果数据可得,挑1-2个覆盖最好的联赛写一个独立的
+   简化版GAP评级脚本(不需要照搬论文精确参数,可以先用指数加权移动平均模拟动态评级),
+   对每场比赛产出"射门/射正预期值差"这个新信号,离线和现有盘口漂移模型的历史预测比较
+   命中率与Brier score/ECE(不是只看命中率,参照confidence_prob校准检验那节的教训)。
+3. **只有第2步显示出明确、样本量足够的提升,才考虑并入`v8_backtest_pipeline.py`的
+   composite**,而且要专门检查小联赛/青年队比赛在射门数据覆盖率上是否够用——这类比赛
+   数据稀疏是笔记里反复验证过的结构性问题,不是新信号能绕开的。
+
+### 信息来源
+
+- Flepp, R., Nüesch, S. & Franck, E. (2016). "Does Bettor Sentiment Affect Bookmaker
+  Pricing?" *Journal of Sports Economics*, 17(1), 3-11. 摘要与数据细节交叉印证自:
+  [SAGE摘要页](https://journals.sagepub.com/doi/abs/10.1177/1527002514521427),
+  [ResearchGate](https://www.researchgate.net/publication/254938176_Does_Bettor_Sentiment_Affect_Bookmaker_Pricing),
+  [University of Fribourg PDF链接](https://www.unifr.ch/tim/en/assets/public/uploads/Publication%20list/2016/Journal%20of%20Sports%20Economics-2016-Flepp-3-11.pdf)
+  (unifr.ch、zora.uzh.ch、sonar.ch均被当前环境代理拦截,未能直接WebFetch原文,以上结论
+  经搜索引擎摘要交叉印证,非直接读取全文)
+- Paul, R. J. & Weinbach, A. P. (2002). "Market Efficiency and a Profitable Betting Rule:
+  Evidence From Totals on Professional Football." *Journal of Sports Economics*, 3(3).
+  [SAGE页面](https://journals.sagepub.com/doi/10.1177/1527002502003003003)(摘要级信息)
+- Woodland, B. M. & Woodland, L. M. (2010). "Market Efficiency and the NHL totals betting
+  market: Is there an under bias?" *Economics Bulletin*, 30(4), 3122-3127.
+  [Academia.edu](https://www.academia.edu/65674388/Market_Efficiency_and_the_NHL_totals_betting_market_Is_there_an_under_bias),
+  [ResearchGate](https://www.researchgate.net/publication/227410468_Market_Efficiency_and_the_NHL_totals_betting_market_Is_there_an_under_bias)
+- Wheatcroft, E. (2020). "A profitable model for predicting the over/under market in
+  football." *International Journal of Forecasting*, 36(3), 916-932.
+  [ScienceDirect](https://www.sciencedirect.com/science/article/abs/pii/S0169207019302559),
+  [LSE eprints](https://eprints.lse.ac.uk/103712),
+  [IDEAS/RePEc](https://ideas.repec.org/a/eee/intfor/v36y2020i3p916-932.html),
+  [ResearchGate](https://www.researchgate.net/publication/338797768_A_Profitable_Model_For_Predicting_the_OverUnder_Market_in_Football)
+  (ScienceDirect/LSE/ResearchGate/Semantic Scholar均被当前环境代理拦截,方法与数字经
+  搜索引擎摘要交叉印证,非直接读取全文,细节以后需要重新核实)
+- Wheatcroft, E. "Forecasting football matches by predicting match statistics."
+  [arXiv 2001.09097](https://arxiv.org/abs/2001.09097),
+  [SAGE/Journal of Sports Analytics](https://journals.sagepub.com/doi/full/10.3233/JSA-200462)
+  (同样被代理拦截,未直接读取全文)
+- nowgoal平台一般性介绍(射门/角球等赛况统计,非本项目覆盖联赛的逐一核实):搜索引擎摘要
+  交叉印证,未直接访问具体比赛历史页面。
