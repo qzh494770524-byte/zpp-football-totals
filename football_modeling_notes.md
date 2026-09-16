@@ -1426,3 +1426,226 @@ Croxson & Reade论文和国家队缺阵研究都只读到摘要没读到全文�
 基本证实了"阵容确认有明确官方时点""大市场对重大信息反应极快"这两个方向性事实,但能不能
 对本项目有用,卡在一个纯本地的、不需要任何研究工具就能回答的问题上,应该作为以后接手这条
 研究线索时的第一步,而不是继续查更多文献。
+
+---
+
+## 2026-09-16 数据窥探/选择偏差的正式统计方法:White's Reality Check、SPA检验、Deflated Sharpe Ratio——把"不要试第4个筛选条件"这句话变成可以量化的检验
+
+### 为什么研究这个,以及和已有记录的对应关系
+
+翻遍笔记全文确认:任务清单里列的六个方向性主题(泊松/Dixon-Coles细节、联赛进球基准、公众
+下注偏好、xG方法论、去水法、sharp money识别)都已经至少查过一轮,唯独"样本量与统计显著性
+在体育博彩回测里的正确用法"这一条,虽然多次被提到(9-10续2查过"检测2%优势需要50轮×7个
+市场"的样本量数字、19场三次分层测试反复强调"选择偏差"、Shin去水法测试时用了McNemar检验),
+但**从来没有查过、用过任何一种正式的"多重检验/数据窥探(data snooping)"统计校正方法**——
+笔记里反复出现的"不要在同一小样本上继续换着法子试第4个筛选条件,那样迟早会试出一个看起来
+好看的,但那是选择偏差"这句话,到目前为止只是一条经验戒律,从未被量化过:到底试了几次之后,
+"看起来显著"的结果有多大概率纯粹是巧合?这次定向查这个问题本身有没有现成的、可以直接采用的
+统计方法,而不是继续凭直觉自我约束。
+
+### 查到的东西(这次搜索环境有明确限制,见文末诚实说明)
+
+**1. White's Reality Check(White, 2000, *Econometrica*)**——这类方法里最早、最经典的一个。
+解决的问题:如果你在同一份历史数据上测试了一整批候选策略/规则,只挑出其中表现最好的一个
+报告出来,这个"最好的"表现有多少是真本事、多少纯粹是"矮子里面挑出的将军"?检验的原假设是
+"整个候选集合里表现最好的那个策略,相对于某个基准(比如无脑策略/零收益),也没有真实的
+超额表现"。做法是用**stationary bootstrap(平稳自助法,Politis & Romano提出,用几何分布
+的随机长度分块重采样,而不是固定长度分块,目的是尽量保留原始时间序列里的弱相关结构)**对
+"每个候选策略相对基准的逐期表现差"这组序列做联合重采样(保留策略之间的相关性一起采),
+构造出"如果所有策略真的都没有超额表现"这个原假设下,"候选集合里最好那个策略的表现"能有
+多好的自助法抽样分布,再拿真实观测到的"最好策略的表现"去对照这个分布算p值——这个p值已经
+把"从一堆候选里挑最好的"这个动作本身考虑进去了,不是单独检验这一个策略。经典应用:
+Sullivan, Timmermann & White(1999,*Journal of Finance*)用这个方法测了**2127条技术分析
+交易规则**在标普500上的表现,结果显示"看起来最赚钱"的那条规则,在Reality Check下并不能
+拒绝"纯属运气"的原假设。**已知缺陷(下面Hansen的论文指出)**:Reality Check有一个反直觉的
+弱点——往候选集合里多塞几条"明显很差、根本不可能表现好"的策略,会让检验变得更保守(更难
+拒绝原假设),这不是一个好的统计检验该有的性质。
+
+**2. Hansen's SPA检验(Hansen, 2005, *Journal of Business & Economic Statistics*)**——
+针对上面那个缺陷的改进版。核心改动:把每个候选策略的表现差先除以它自己的(HAC稳健)标准差
+再取最大值(studentize,学生化),而不是直接比较原始表现差的大小,这样方差本来就很大、本身
+就不稳定的"烂策略"不会不成比例地拉高整个检验的保守程度,让检验**更有效力(power更高)、
+不那么保守**。相关的延伸方法:**Romano & Wolf(2005)的StepM(stepwise multiple testing)**
+在同一套bootstrap逻辑上做了一个"逐步剔除"程序——先检验并剔除掉集合里显著跑赢基准的最好
+策略,再对剩下的策略重新构造一个(缩小后的)联合置信区域,反复迭代,目的是**找出所有真正
+显著跑赢基准的策略,而不只是挑出唯一"最好"的那一个**,同时依然控制"整个族里出现假阳性"的
+概率——这个思路直接对应笔记"9-10续"那节"全票一致/偏离幅度/参与公司数"三种筛选一起测的
+场景:StepM式的做法是三个一起放进候选集合联合检验,而不是像笔记记录的那样一个一个单独看
+有没有显著。
+
+**3. Deflated Sharpe Ratio(Bailey & López de Prado, 2014)**——这次查到细节最完整、
+最可以直接套用数字的一个方法,核心机制是"用测试过的策略数量N,反推'纯属运气'情况下能
+达到的最佳表现有多好,再拿真实观测值去跟这个'运气基准'比,而不是跟0比"。
+
+- 第一步是Probabilistic Sharpe Ratio(PSR,同作者2012年"The Sharpe Ratio Efficient
+  Frontier"),大意结构是:把观测到的Sharpe比率SR̂减去要挑战的基准SR*,除以一个同时考虑了
+  样本量T、收益率偏度γ₃、峰度γ₄的标准误,再套标准正态CDF算出"SR̂真的超过SR*"的概率——
+  偏度越负、峰度(肥尾)越高,分母越大,同样的点估计Sharpe比率需要更长的观测期才能达到
+  同等的置信度。
+- 第二步(真正的多重检验校正)是"N次独立试验下,预期能达到的最大Sharpe比率"的解析近似公式,
+  结构上是"试验间Sharpe比率的方差" × "一个由N和欧拉-马歇罗尼常数(γ≈0.5772)构成的
+  极值项"——**这是一个极值理论的结果:哪怕N个策略的真实Sharpe比率全部是0(完全没有真本事),
+  只要N足够大,里面"看起来最好"的那个,预期Sharpe比率也会显著大于0,而且这个"虚假的最佳
+  表现"会随着N和策略间表现的离散程度系统性上升**。查到的具体数字示例(多个来源交叉印证):
+  假设策略间Sharpe比率方差为1,**测试1000个独立策略后,即使每个策略的真实Sharpe比率都是0,
+  预期最好的那个也会显示出约3.26的Sharpe比率**——这是这类方法里最直观的一个警示性数字,
+  直接说明"回测出一个好看的数字"和"这个数字反映真实优势"是两件完全不同的事,差距会随着
+  试验次数系统性拉大。
+- 第三步:把这个"N次试验下预期最佳表现"代入第一步PSR公式里原本"要挑战的基准SR*"的位置,
+  得到DSR——也就是说,DSR真正检验的原假设不是"真实优势=0",而是**"真实优势=如果试了这么
+  多次、纯属运气也能达到的最佳表现"**,是一个明显更严格的门槛。
+- 完整用这个方法需要五个输入:观测期长度T、策略收益的偏度γ₃、峰度γ₄、试验次数N、以及
+  N次试验里各自Sharpe比率的方差。**这最后两个恰恰是笔记里从来没有正式记录过的东西**——
+  笔记记录了很多次"测了什么、结果如何",但从未把"这是第几次独立试验"和"这批试验各自的
+  表现分布"系统整理成一份可以拿来算N和方差的清单。
+- 配套的实用结论(Minimum Backtest Length,MinBTL,Bailey/Borwein/López de Prado/Zhu
+  "The Probability of Backtest Overfitting"里给出的示例数字):**只有5年数据量的回测,
+  最多能容忍尝试大约45种独立的模型/参数配置,超过这个数量,几乎必然会"试出"一个样本内
+  Sharpe比率看起来有1、但样本外真实Sharpe比率其实是0的假发现**。这个"用可用数据量反推
+  能承受多少次独立试验"的思路,和笔记"9-10续2"已经记录的"检测2%优势需要50轮×7个市场的
+  样本"是同一类校准,但角度是反过来的(那条是"要多少数据才能测出一个给定优势",这条是
+  "给定这么多数据,最多能试几次而不至于测出假发现")——两条可以互相印证,值得以后一起用。
+
+**4. 更简单的替代方案:Bonferroni校正 vs. False Discovery Rate(Benjamini-Hochberg,1995)**。
+Bonferroni是最简单的做法——把目标显著性水平α除以试验次数m,每个假设都用α/m这个更严的
+门槛去检验,保证"整个族里出现任何一个假阳性"的概率不超过α;缺点是**当试验数量变多、且
+试验之间彼此相关(这正是本项目的情况——比如"偏离幅度>0.3"和"偏离幅度>0.4"这两种筛选
+本质上高度相关,不是互相独立的两次试验)时,Bonferroni会变得过度保守,把力度也很难拒绝掉**。
+Benjamini-Hochberg控制的不是"是否出现任何假阳性",而是"被判定为显著的这批结果里,假阳性
+占的期望比例"——试验次数多的时候比Bonferroni更有效力。**Harvey & Liu(2015,"Backtesting",
+Journal of Portfolio Management,及同作者"Evaluating Trading Strategies")直接把这套逻辑
+应用到量化交易策略回测上**,提出对报告出来的Sharpe比率做"haircut(打折)",并明确对比了
+三种校正方法的严格程度:Bonferroni(最严格,单步)→ Holm(Bonferroni的序贯/逐步版本,
+同等条件下比纯Bonferroni宽松一些,但需要"所有试过的策略各自的p值"这份完整名单,不能只有
+最后赢家的p值)→ BHY(Benjamini-Hochberg-Yekutieli,控制FDR而非FWER,三者里打折最轻)。
+**Holm和BHY都要求研究者保留"每一个试过的策略/规则的真实结果",不能事后凭记忆补——这一点
+和本项目的实际情况直接冲突:笔记里"全票一致/偏离幅度/参与公司数"这三个筛选条件虽然都记录
+了结果,但没有把它们当成"同一批需要联合校正的N次试验"正式整理过,现在如果想补做这个校正,
+这三条的结果已经在笔记里,可以拿来当一个小规模的示范案例。**
+
+**5. 直接应用到体育博彩回测的先例:这次没有查到。** 多次尝试搜索"data snooping sports
+betting""deflated sharpe ratio sports betting""White's reality check betting"等
+关键词,只查到体育博彩市场效率的一般性文献(讨论统计功效、样本量,但不使用Reality
+Check/SPA/DSR/FDR这几种具体方法),以及量化金融领域这几个方法本身的介绍——**没有找到
+任何一篇论文把Reality Check、SPA检验、Deflated Sharpe Ratio或FDR校正直接用在体育博彩
+策略回测上。这是一个真实的方法论空白,不是搜索技巧不够:如果本项目要用这套方法,是把
+一套成熟的量化金融方法论"嫁接"过来,不是照抄一篇体育博彩领域已经做过的现成案例。**
+
+**6. 试验次数N该怎么数,当"试验"是研究过程中陆续做的决策、不是一次性网格搜索时**——这正好
+是本项目的实际情况(不是一次性把所有筛选条件放进一个脚本网格搜索,而是这几天陆续想到一个
+测一个)。查到的结论比较一致但也比较令人无奈:**这几种方法(尤其DSR)的可信度完全依赖于
+"如实记录到底试了多少次",而目前查到的所有资料都没有提供"事后如何反推补算N"的公式——
+一致的建议是"从现在开始如实记录每一次试验",而不是"用某个公式把过去没记录的试验次数
+估算出来"。** 另外查到一个方向性的补充:当候选试验之间彼此相关(本项目"偏离幅度"不同阈值
+之间显然高度相关)时,该用的不是试验的"字面数量",而是"有效独立试验数"——有来源(可信度
+中等,只有摘要级信息)提到可以用相关矩阵的有效秩(effective rank)、随机矩阵理论
+(Marchenko-Pastur)划分信号/噪声特征值、或者直接对高度相关的试验做聚类后按簇计数这几种
+思路来估算"有效N",但都停留在方向性描述,没有查到可以直接套用的具体公式。**唯一相对可操作
+的建议是:Harvey & Liu的Holm/BHY方法因为直接用"所有实际跑过的试验的经验p值分布"而不是
+假设的独立性结构,对这种"陆续做的、非规整网格搜索"的研究过程反而更友好——前提依然是每次
+都要把结果记下来,不能只记录"赢家"。**
+
+### 与本仓库的对应关系:这次是纯方法论/纪律层面的接入,不涉及v8_backtest_pipeline.py的
+信号计算逻辑,但涉及一个新的记录习惯
+
+这次查到的方法全部作用于"怎么解读一批回测结果",不改变`compute_odds_drift_signal()`/
+`compute_expected_goals()`本身怎么算,所以**不需要给`v8_backtest_pipeline.py`加任何新
+数据字段**,但需要区分清楚可以做和做不到的部分:
+
+1. **做不到、必须如实承认的部分**:笔记里已经记录的那些历史测试(19场三次分层、79场固定
+   规则回测、Shin vs multiplicative去水法、leader/follower分层、confidence_prob校准
+   检验、K联赛/日职联/英超三个联赛的Dixon-Coles验证……)**都不是按照"预先登记试验、事后
+   联合校正"的纪律做的,现在没有办法严谨地回填出一个"总共试了N次"的数字去套DSR公式**——
+   上面查到的资料明确说这类事后补算没有公式可用,勉强凑一个N出来,本身就是又一次"看起来
+   有理有据但其实是编造精确度"的陷阱,不能做。
+2. **低成本、可以立刻开始做、不需要改动任何现有脚本**:从这次研究之后,**新建一个持续
+   追加的"试验登记表"**(比如一个简单的`trials_log.json`或者干脆是本笔记里的一个专门
+   小节),每次测试一个新的筛选规则/阈值/权重变体时,不管结果好坏都记录:测试日期、规则
+   的具体定义、用的样本(哪些比赛、多少场)、命中率/ROI、以及"这是不是和之前某次试验高度
+   相关的变体"。这是这次研究里反复强调的、唯一真正能让Bonferroni/Holm/BHY/DSR这几种方法
+   将来变得可用的前提条件,而且成本很低——不需要等这份表"够大"才有用,从现在这次研究记录
+   开始算起就可以。
+3. **中等成本、以后有了这份登记表之后可以做**:等积累了足够多"正式登记"的试验(哪怕只有
+   5-10条),可以用最简单的Bonferroni或者Benjamini-Hochberg(不需要先跳到Reality
+   Check/SPA/DSR这几种更复杂的bootstrap方法)重新检验一遍笔记里那些"看起来有微弱效果"
+   的发现(比如"水位一致性对大方向57.4%"这类)在校正后是否还站得住——这一步是纯统计
+   计算,可以在独立分析脚本里做,不用碰`v8_backtest_pipeline.py`主逻辑。
+4. **明确不建议做的事**:不要现在就为了套用DSR/Reality Check这类方法,反过来去"凑"一个
+   历史试验次数的估计值,然后据此宣布笔记里某条结论"通过了/没通过多重检验校正"——这次
+   查到的资料反复强调这类方法的可信度完全建立在诚实计数之上,事后编一个数字代入公式,
+   得到的结论比不做校正更容易误导人。
+
+### 信息来源与可靠性说明(这次的限制比之前几节更严重,需要重点如实说明)
+
+**这次会话里WebFetch工具对测试过的所有域名(包括davidhbailey.com、en.wikipedia.org、
+homepage.ntu.edu.tw、marti.ai、medium.com、rdrr.io,甚至example.com、google.com这种
+完全无关痛痒的域名)全部返回连接被拦截,比笔记"9-11""9-13""9-15"几次记录的"部分学术
+域名被拦截"范围更大——这次相当于本次会话里WebFetch整体不可用,以下全部内容只来自
+WebSearch返回的搜索引擎摘要/交叉印证,没有一篇论文原文被直接读取到。** 这比笔记之前
+标注过的任何一次"降级为摘要级别"都更彻底,里面提到的具体公式(尤其PSR/DSR的数学表达式、
+峰度到底是超额峰度还是原始峰度)、"1000次试验预期最佳Sharpe≈3.26"和"5年数据最多容忍
+45次试验"这两个具体数字,都需要以后有条件时找到原文或者至少找到能直接访问的PDF/代码
+实现(比如查到但未验证的GitHub仓库`rubenbriones/Probabilistic-Sharpe-Ratio`)重新核实,
+不能直接当成精确公式写进任何计算脚本。
+
+- White(2000), "A Reality Check for Data Snooping", *Econometrica* 68(5):
+  [Wiley摘要](https://onlinelibrary.wiley.com/doi/abs/10.1111/1468-0262.00152),
+  [Econometric Society条目](https://www.econometricsociety.org/publications/econometrica/2000/09/01/reality-check-data-snooping)
+- Sullivan, Timmermann & White(1999), "Data-Snooping, Technical Trading Rule Performance,
+  and the Bootstrap", *Journal of Finance*(2127条技术分析规则的实证):
+  [Wiley](https://onlinelibrary.wiley.com/doi/10.1111/0022-1082.00163)
+- Hansen(2005), "A Test for Superior Predictive Ability", *Journal of Business &
+  Economic Statistics*: [SSRN摘要](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=264569),
+  [Taylor & Francis](https://www.tandfonline.com/doi/abs/10.1198/073500105000000063)
+- Romano & Wolf(2005), "Stepwise Multiple Testing as Formalized Data Snooping"
+  (StepM方法):经搜索引擎摘要交叉印证,未找到可直接核实的免费全文链接。
+- Bailey & López de Prado(2012), "The Sharpe Ratio Efficient Frontier"(PSR的原始出处)
+  与(2014), "The Deflated Sharpe Ratio: Correcting for Selection Bias, Backtest
+  Overfitting, and Non-Normality":[SSRN摘要](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2460551),
+  [davidhbailey.com PDF链接](https://www.davidhbailey.com/dhbpapers/deflated-sharpe.pdf)
+  (未能直接WebFetch),[Wikipedia "Deflated Sharpe ratio"词条](https://en.wikipedia.org/wiki/Deflated_Sharpe_ratio)
+  (未能直接WebFetch,经搜索引擎摘要获得),[Quantdare博客讲解](https://quantdare.com/deflated-sharpe-ratio-how-to-avoid-been-fooled-by-randomness/),
+  [ML4T文档](https://www.ml4trading.io/docs/diagnostic/methods/deflated-sharpe-ratio/),
+  [GitHub参考实现 rubenbriones/Probabilistic-Sharpe-Ratio](https://github.com/rubenbriones/Probabilistic-Sharpe-Ratio/blob/master/src/sharpe_ratio_stats.py)
+  (代码本身未读取,仅确认仓库存在,以后如果要实现可以直接去读这份代码而不是凭这次的摘要
+  自己重新推公式)
+- Bailey, Borwein, López de Prado & Zhu, "The Probability of Backtest Overfitting"
+  及配套讲稿(MinBTL≈45次试验/5年数据这个示例数字出处):
+  [davidhbailey.com讲稿PDF链接](https://www.davidhbailey.com/dhbtalks/battle-quants.pdf)
+  (未能直接WebFetch)
+- López de Prado & Porcu,"The Deflated Sharpe Ratio: A Unified Framework for
+  Search-Adjusted Performance Inference"(2025年较新的延伸,提出DSR-L/DSR-LS/DSR-EO
+  三种变体,DSR-EO用完整搜索分布而非假设的极值近似,可能是"如何处理非规整/序贯试验过程"
+  这个问题最直接相关的后续文献):[SSRN摘要 7198158](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=7198158)
+  (仅摘要级信息,未能核实具体机制)
+- Harvey & Liu(2015), "Backtesting", *Journal of Portfolio Management* 及"Evaluating
+  Trading Strategies"(haircut Sharpe ratio,Bonferroni/Holm/BHY三种多重检验校正的
+  对比):[SSRN 2345489](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2345489),
+  [SSRN 2474755](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2474755),
+  [OpenSourceQuant对该论文的R语言复现讲解](https://opensourcequant.wordpress.com/2016/11/17/r-view-backtesting-harvey-liu-2015/),
+  [rdocumentation.org的haircutSharpe函数文档](https://www.rdocumentation.org/packages/quantstrat/versions/0.16.7/topics/haircutSharpe)
+  (`quantstrat::haircutSharpe`是一个可以直接安装查看的R实现,以后如果要落地这个方法,
+  比凭搜索摘要重新推导更可靠)
+- Benjamini & Hochberg(1995), "Controlling the False Discovery Rate: A Practical and
+  Powerful Approach to Multiple Testing", *JRSS-B*:
+  [Oxford Academic](https://academic.oup.com/jrsssb/article/57/1/289/7035855)
+- Harvey, Liu & Zhu(2016),"...and the Cross-Section of Expected Returns",*Review of
+  Financial Studies*(不是体育博彩文献,但提供了"因为文献里测过几百个因子,新因子的t值
+  门槛应该从传统的2.0提高到3.0"这个同一类逻辑的著名旁证):
+  [NBER工作论文PDF链接](https://www.nber.org/system/files/working_papers/w20592/w20592.pdf)
+  (未能直接WebFetch)
+- "有效试验次数"在相关/非独立试验场景下如何估算(effective rank、Marchenko-Pastur、
+  聚类计数,仅方向性描述,可信度中等):[VertoxQuant博客](https://www.vertoxquant.com/p/the-effective-number-of-tested-strategies)
+  (未能直接WebFetch,仅搜索引擎摘要)
+- 体育博彩市场效率一般性文献(确认"直接应用这几种多重检验方法到体育博彩"这个空白,而非
+  提供反例):[PMC: A statistical theory of optimal decision-making in sports betting](https://pmc.ncbi.nlm.nih.gov/articles/PMC10306238/),
+  [AEA: Betting Markets and Market Efficiency: Evidence from College Football](https://www.aeaweb.org/conference/2010/retrieve.php?pdfid=406)
+
+**方法论诚实说明(重复强调,因为这次的限制比以往严重)**:本节所有具体公式、参数含义
+(尤其"峰度γ₄到底是原始峰度还是超额峰度"这一点,不同摘要来源的表述不完全一致,这次没能
+核实清楚)、"约3.26""约45次"这两个具体数字,均来自WebSearch摘要交叉印证,**没有一篇被
+直接WebFetch读取全文**——这次连example.com、google.com这类完全无关的域名都被环境代理
+拦截,说明这次的限制更可能是本次会话/环境层面的问题,而不是学术域名本身的问题,以后重新
+research时应该先确认WebFetch本身是否恢复正常,而不是默认这次的限制会一直持续。在正式把
+这些公式写进任何计算脚本之前,必须先找到能直接访问的原文或者上面列出的开源代码实现
+(`quantstrat::haircutSharpe`、`rubenbriones/Probabilistic-Sharpe-Ratio`)核实一遍。
