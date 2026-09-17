@@ -1649,3 +1649,202 @@ WebSearch返回的搜索引擎摘要/交叉印证,没有一篇论文原文被直
 research时应该先确认WebFetch本身是否恢复正常,而不是默认这次的限制会一直持续。在正式把
 这些公式写进任何计算脚本之前,必须先找到能直接访问的原文或者上面列出的开源代码实现
 (`quantstrat::haircutSharpe`、`rubenbriones/Probabilistic-Sharpe-Ratio`)核实一遍。
+
+---
+
+## 2026-09-17 预测组合(forecast combination)与"去相关"方法论:市场信号重组已到天花板之后,被漏掉的第三条路
+
+### 为什么研究这个,以及和已有记录的关系
+
+笔记里到目前为止,面对"要不要用独立于盘口的信号"这个问题,实际上只测过两种极端做法:
+(1) 完全用盘口衍生信号做各种切法(全票一致/偏离幅度/leader-follower/去水法……),已经在
+"2026-09-11续2"被两篇文献(ELO-Odds、EMH)从理论上判了天花板;(2) 真正独立的信号
+(简易泊松、真Dixon-Coles)算出来之后,拿它的**独立命中率**去和盘口基线赛马,三次都输
+("已废弃"的简易泊松、"9-11续3"三联赛Dixon-Coles全部没跑赢基线)。**这次定向查的是被
+这两个极端漏掉的中间地带:学术上"结合预测"(forecast combination)这个成熟子领域,专门
+研究"一个独立信号本身打不赢基准,能不能通过和基准做数学上的组合、而不是替代,仍然获得
+增量"——这和"9-11续3"结束时留下的问题(真Dixon-Coles三个联赛都没赢,但没有人测过它和
+市场组合起来会怎样)直接对应,而且**不需要任何新数据**,可以直接复用"9-11续3"已经产出的
+三联赛Dixon-Coles概率和现有v8盘口信号的历史数据重新算一遍,是这次为数不多"不需要先解决
+数据缺口"就能验证的方向。
+
+### 查到的东西
+
+**Part A:真正的学术先例——Bayesian凸组合模型,不是简单加权规则**
+
+**Egidi, Pauli & Torelli (2018), "Combining historical data and bookmakers' odds in
+modelling football scores", *Statistical Modelling*, 18(5-6), 436-459.** 这篇论文和本节
+问题几乎是一一对应:构建了一个层级贝叶斯泊松模型,**每支球队的进球率(λ/μ)本身就是"历史
+战绩估计出的进球率"和"盘口赔率反推出的进球率"两个来源的凸组合(convex combination)**,
+组合权重从数据里估计,不是人工拍定。用9个赛季的欧洲主流联赛数据训练,预测第10个赛季。
+查到的方向性结论(多个独立信源——SAGE期刊页、ResearchGate、ADS、academia.edu、DeepAI——
+交叉印证同一个模型结构描述,机制描述可信度较高):这个组合模型的预测准确度能做到和博彩公司
+持平甚至更好,而且**即使考虑博彩公司自带的抽水(overround),在用最高/平均/常见赔率结算时
+都显示出正的模拟收益**。**必须如实说明:这次WebFetch对arxiv.org、arts.units.it(的里雅斯特
+大学postprint)、deepai.org、semanticscholar.org全部返回连接层拦截(`EGRESS_BLOCKED`),
+和"9-16"那节记录的"WebFetch本次会话整体不可用"是同一种限制的延续——上面的机制描述和结论
+方向经多个搜索引擎摘要来源交叉印证,但具体的组合权重数值、准确度指标(RPS/pseudo-R²等)
+的精确数字这次完全没有拿到,不能当成可以直接抄的公式或数字。**
+
+**这个模型结构和本项目此前"两模型冲突时信进球模型"(已废弃)的关键区别,必须说清楚,不要
+误以为是同一个东西测第二遍**:已废弃的那条规则是**二元覆盖**——盘口和进球模型方向冲突时,
+整场比赛只信进球模型(0/1开关);Egidi等人的方法是在**进球率这个连续量**上做凸组合(比如
+`λ_combined = w·λ_历史 + (1-w)·λ_赔率反推`,w是从数据估出的连续权重,不是"哪个对就全信谁"
+的开关),就算独立信号本身很弱(w很小),组合后的结果理论上也不会比单纯盘口更差——这是
+"混合"和"二选一覆盖"两种完全不同的数学操作,后者已经测过失败,不能代表前者也失败。
+
+**Part B:直接可用的开源实现——footBayes包,这次真正读到了源码原文,不是摘要**
+
+**这部分是本次会话唯一绕开WebFetch拦截、读到第一手原始内容的部分**:`raw.githubusercontent.com`
+这个域名这次没有被拦截(和"9-11续3"时`mberk/shin`可以`pip install`但读不到论文原文类似,
+这次是"代码本身能读到,论文原文读不到"),直接读取了
+[LeoEgidi/footBayes](https://github.com/LeoEgidi/footBayes) 仓库的
+`R/mle_foot.R`、`R/stan_foot.R`、`man/stan_foot.Rd`、`DESCRIPTION`、`README.md`
+这几个文件的真实内容(不是搜索引擎摘要)。这个包是Egidi(上面2018论文的第一作者)团队
+持续维护的框架,`stan_foot()` 支持二元泊松/Dixon-Coles/Skellam等多种进球分布模型,和
+本项目"9-11续3"到"9-13"三节做的手工scipy实现是同一类模型,但多了两个直接相关、本项目
+从未考虑过的机制:
+
+1. **`dynamic_weight=TRUE` + `dynamic_type="weekly"/"seasonal"`**:实现的是
+   Macrì Demartino, Egidi & Torelli (2026, *JRSS-C*, doi:10.1093/jrsssc/qlag032)的
+   "commensurate priors + spike-and-slab超参数"动态模型——球队攻防强度按周或按赛季
+   动态演化,**每支球队每个时间段各自有独立的、由spike-and-slab超参数控制的收缩力度**,
+   不是"9-13"那节提出的单一全局τ²(所有球队用同一个收缩强度)。这直接回应"9-13"那节
+   自己承认的局限("单一τ²通过似然曲率自动实现数据越少收缩越强,不需要按球队踢了几场手动
+   分档"——但这仍然是全局一个先验方差,不是按球队再分层);也直接对应"9-11续3"记录的
+   已知缺口#3(K联赛冠军组/保级组分组导致γ算出负值)——`dynamic_type="seasonal"`这种
+   "按赛季阶段切换"的动态权重,结构上正是为处理"同一个联赛内部赛程结构发生变化"这类情况
+   设计的,值得以后重新做K联赛拟合时对照参考(不代表现成能直接套用,K联赛的冠军组/保级组
+   分裂和欧洲联赛常规赛季中的"动态"含义不完全一样,需要专门确认这个机制是否覆盖这种赛程
+   结构)。
+2. **`ranking` 参数**:接受一个外部的"每支球队每个时间段的排名分数"(`rank_points`)
+   数据框,配合 `norm_method`("standard"/"mad"/"min_max"等标准化方式)把这个外部排名
+   当成弱信息先验注入模型——文档和README明确说明这个参数设计给FIFA排名/Elo这类外部评级
+   系统用,**没有现成的"喂盘口反推强度"用法**,但这个参数槽位本身是通用的:理论上可以把
+   "赔率反推出的球队攻防强度"当成一种自定义"ranking"喂进去,让模型自动决定这个外部信息
+   该被信多少(通过spike-and-slab机制),而不是像Egidi 2018原始论文那样单独重新写一个
+   凸组合模型。**这比"9-13"那节提出的手写L2正则化更精细一步(数据量越少的球队自动更依赖
+   外部先验),但需要先确认`ranking`参数接受的输入格式能不能塞进"赔率反推强度"这种非标准
+   排名数据,这次没有做这个验证,只是指出这个槽位存在。**
+
+### Part C:预测组合的一般原理——"简单平均"这个最保守的组合方式,本身就有理论依据
+
+这方面查到的是**通用预测学文献**,不是体育博彩专门文献,但和上面Part A的"凸组合"直接呼应,
+补上了"组合权重该怎么定"这个实操问题:**"forecast combination puzzle"**(源自Bates &
+Granger 1969提出"组合多个预测比只用最好的单一预测更准"这个经典结论之后,后续文献反复发现
+的一个反直觉现象)——**简单等权平均,经常比"用历史误差方差/协方差估计出理论最优权重"这种
+更精细的组合方式更稳健、更难打败**,尤其是在可用于估计权重的样本量不够大、或者候选预测
+数量不多的时候(样本量小则估计出来的"最优权重"本身方差很大,精细化组合反而引入了额外的
+估计噪声)。**这直接给出一条务实建议**:如果以后真要把Dixon-Coles概率和v8现有composite
+隐含概率做组合,**第一步应该先试最简单的50/50等权平均,而不是急着用历史数据拟合一个"最优
+混合权重"**——本项目历史数据规模(K联赛125场train/42场test这个量级)本来就小,"9-16"
+那节已经查过"体育博彩里检测2%优势需要50轮×7个市场"的样本量要求,在这么小的样本上再去拟合
+一个额外的混合权重参数,大概率会重复"过拟合出一个看起来好但纯属噪声的权重"这个陷阱,等权
+平均没有这个自由度可以过拟合,是更安全的起点。
+
+### Part D:一个更根本的概念校正——"打赢市场"不需要模型本身更准,只需要误差和市场不相关
+
+**Hubáček & Šír, "Beating the market with a bad predictive model"(2020年提交arXiv
+2010.12508,后续发表于*International Journal of Forecasting*)**——这篇的核心论点直接
+回应"9-11续2"那条元结论留下的一个隐含疑问:如果任何独立信号本身达不到市场的准确度就没有
+价值,那"独立数据源"这条路是不是从根上就走不通?这篇论文说:**不是。系统性盈利不需要"模型
+本身比市场更准",只需要模型的预测误差和市场定价的误差**"去相关"(decorrelate)**——
+论文明确把训练目标从"让模型本身预测更准"改成"显式让模型的输出和市场共识去相关",作者称
+这样能捕捉到市场定价里"不起眼的偏差"(inconspicuous biases),并且明确把股票交易和体育
+博彩这两个领域放在同一个框架下讨论。查到的一处具体机制性描述(仅摘要级,未读到原文验证):
+"增加去相关程度"总体上会增加"模型正确预测冷门获胜"这类被市场低估的机会,但如果去相关做得
+过猛,同时也会成比例地增加"押冷门押错"的次数,两者会互相抵消——**这提示"去相关"本身不是
+越多越好,存在一个需要在样本外验证的最优程度,不是调到底就最赚**。
+
+**这条结论对本项目的意义,是给"9-11续3"三联赛Dixon-Coles"没跑赢基线"这个结果提供了一个
+此前没想到的重新检验角度**:那次评估用的标准是"Dixon-Coles独立命中率 vs 无脑选大/选小
+基线",这正是Hubáček & Šír论文暗示"问错了问题"的评估方式——**真正该测的不是"Dixon-Coles
+自己准不准",而是"Dixon-Coles和v8现有盘口信号的误差,在两者意见不一致的场次上,是不是
+存在系统性、非随机的模式"**。如果两者的错误高度相关(比如都在同一批"意外大比分"的比赛上
+翻车),组合没有意义,"9-11续3"的负面结果就该照单全收;但如果在分歧场次上Dixon-Coles确实
+有和市场不同、且方向正确的偏移,组合(哪怕Dixon-Coles整体比市场差很多)理论上仍然可能有
+增量——这个问题现有数据可以直接回答,不需要新数据,只是此前从未这样问过。
+
+### 与本仓库数据的对应关系、接入建议(供以后决定是否做,不代下结论)
+
+1. **零成本、可以立刻做、复用"9-11续3"已产出的数据**:把K联赛/日职联/英超三个联赛
+   Dixon-Coles算出的Over概率,和这些比赛对应的v8现有盘口composite隐含概率取出来,
+   在train集上先试**最简单的50/50等权平均**(参照Part C,不要先跳到拟合最优权重),
+   在test集上分别对比"纯Dixon-Coles"、"纯v8盘口"、"等权平均组合"三者的命中率和Brier
+   score——这是"9-11续3"结束时留下但没有做的下一步,不需要重新拟合Dixon-Coles模型,
+   也不需要抓任何新数据,是这次接入建议里成本最低、能立刻验证的一条。
+2. **零成本、和上面同一批数据能一起做的诊断**:单独挑出"Dixon-Coles方向 vs v8盘口composite
+   方向"不一致的那个子集,看Dixon-Coles在这个子集上的命中率是否明显偏离50%(不管高于还是
+   低于,只要显著偏离都说明有信息量;如果就在50%附近说明分歧纯粹是噪声)——这是Part D
+   提出的"检验误差是否去相关"的直接可操作版本,样本量取决于三个联赛test集分歧场次的数量
+   (可能只有几十场,需要如实报告置信区间,参照"9-10续2"和"9-16"两节反复强调过的样本量
+   纪律,不能因为看到一个好看的百分比就下结论)。
+3. **中等成本、需要先确认可行性、不改v8主逻辑**:如果上面两步显示组合/分歧子集确实有
+   信息量,再考虑参照footBayes的`ranking`参数机制(Part B),在独立测试脚本里(不是
+   `dixon_coles.py`本身)尝试把"赔率反推的球队强度"当成一种外部弱先验,通过类似
+   commensurate prior的机制注入现有Dixon-Coles拟合,而不是简单地在最终概率层面加权
+   平均——这一步复杂度明显更高,只有前两步验证有效才值得投入,而且需要先确认这类"非标准
+   排名数据"能不能对应到footBayes或自己实现的commensurate prior框架里,这次没有验证。
+4. **明确不建议做的事**:不要把这次的发现理解成"可以回头重新试Shin去水法/leader-follower
+   这类纯盘口内部信号的各种加权组合"——Part A/B/D的方法都要求参与组合的至少一方是**真正
+   独立于盘口的信息源**(历史战绩驱动的进球率模型),对同一份盘口衍生信号(line_sig/
+   water_sig/euro_sig)做加权平均,不满足"两个信息源"这个前提,不会绕开"9-11续2"元结论
+   描述的天花板,组合的价值来自信息源本身独立,不来自组合这个数学操作本身。
+
+### 信息来源与可靠性说明
+
+**这次会话WebFetch的可用性和"9-16"那节记录的情况一致:测试了arxiv.org、
+arts.units.it、deepai.org、semanticscholar.org、www.stat.berkeley.edu、
+en.wikipedia.org、cran.r-project.org、cloud.r-project.org、ida.felk.cvut.cz、
+api.github.com共10个域名,全部返回`EGRESS_BLOCKED`或403,只有`raw.githubusercontent.com`
+成功——这次的footBayes代码/文档内容(Part B引用的`mle_foot.R`、`stan_foot.R`、
+`stan_foot.Rd`、`DESCRIPTION`、`README.md`)是这几个文件里唯一直接读到原始内容、
+不经搜索引擎摘要中转的部分,可信度高于本节其余内容;Part A/C/D的具体数字和机制细节均为
+WebSearch摘要交叉印证多个独立来源所得,不是直接读取论文原文,以后有条件时应重新核实,
+尤其是Egidi等(2018)论文里凸组合权重的具体估计方法和准确度指标数值、Hubáček & Šír
+论文里"去相关"目标函数的具体数学形式。**
+
+- Egidi, L., Pauli, F. & Torelli, N. (2018). "Combining historical data and bookmakers'
+  odds in modelling football scores." *Statistical Modelling*, 18(5-6), 436-459.
+  机制与结论经多个独立来源交叉印证(均未能直接WebFetch核实全文):
+  [SAGE期刊页](https://journals.sagepub.com/doi/abs/10.1177/1471082X18798414),
+  [ResearchGate](https://www.researchgate.net/publication/328490567_Combining_historical_data_and_bookmakers'_odds_in_modelling_football_scores),
+  [arXiv 1802.08848](https://arxiv.org/pdf/1802.08848),
+  [的里雅斯特大学postprint](https://arts.units.it/retrieve/e2913fde-beab-f688-e053-3705fe0a67e0/2930464_paper-PostPrint.pdf),
+  [DeepAI](https://deepai.org/publication/combining-historical-data-and-bookmakers-odds-in-modelling-football-scores),
+  [ADS摘要](https://ui.adsabs.harvard.edu/abs/2018arXiv180208848E/abstract)
+- LeoEgidi/footBayes R包——**本次直接WebFetch读取到原始文件内容,非摘要**:
+  [仓库主页](https://github.com/LeoEgidi/footBayes),
+  [R/mle_foot.R](https://raw.githubusercontent.com/LeoEgidi/footBayes/master/R/mle_foot.R),
+  [R/stan_foot.R](https://raw.githubusercontent.com/LeoEgidi/footBayes/master/R/stan_foot.R),
+  [man/stan_foot.Rd](https://raw.githubusercontent.com/LeoEgidi/footBayes/master/man/stan_foot.Rd),
+  [DESCRIPTION](https://raw.githubusercontent.com/LeoEgidi/footBayes/master/DESCRIPTION),
+  [README.md](https://raw.githubusercontent.com/LeoEgidi/footBayes/master/README.md)
+- Macrì Demartino, G., Egidi, L. & Torelli, N. (2026). "Bayesian weighted discrete-time
+  dynamic models for association football prediction." *Journal of the Royal Statistical
+  Society Series C*, doi:10.1093/jrsssc/qlag032(commensurate priors + spike-and-slab
+  动态权重模型,footBayes `dynamic_weight`参数的出处)。论文本身
+  [arXiv 2508.05891](https://arxiv.org/html/2508.05891v1) 和
+  [期刊页](https://academic.oup.com/jrsssc/advance-article/doi/10.1093/jrsssc/qlag032/8704597)
+  均被当前环境代理拦截,机制描述来自footBayes包文档(已直接读取)对该论文方法的转述,
+  不是读到论文原文本身,具体的spike-and-slab超参数设定以后需要另外核实。
+- Bates, J.M. & Granger, C.W.J. (1969), "The Combination of Forecasts"(forecast
+  combination的奠基文献)与后续"forecast combination puzzle"相关综述:经WebSearch摘要
+  交叉印证,[Wang & Hyndman, "Forecast combinations: an over 50-year review"
+  (arXiv 2205.04216)](https://arxiv.org/pdf/2205.04216),
+  [When to choose the simple average in forecast combination, ScienceDirect](https://www.sciencedirect.com/science/article/abs/pii/S0148296316303952)
+  ——均未能直接WebFetch核实全文。
+- Hubáček, O. & Šír, G., "Beating the market with a bad predictive model"(2020年提交
+  arXiv,后发表于*International Journal of Forecasting*):
+  [arXiv 2010.12508](https://arxiv.org/pdf/2010.12508),
+  [ResearchGate](https://www.researchgate.net/publication/344878637_Beating_the_market_with_a_bad_predictive_model),
+  [作者个人页](https://gustiks.github.io/publication/2009-10-01-paper-title-number-4)
+  ——均未能直接WebFetch核实全文,核心论点(去相关而非准确度是盈利的充分条件)经多个独立
+  搜索结果摘要交叉印证,具体目标函数与数值结果需要以后重新核实。
+- Constantinou, A.C. (2020), "Investigating the efficiency of the Asian handicap football
+  betting market with ratings and Bayesian networks"(本次顺带查到,供以后深挖"让球深浅"
+  信号时参考,这次未展开分析,仅确认存在这篇专门研究亚洲盘让球市场效率的同行评审文献):
+  [arXiv 2003.09384](https://arxiv.org/pdf/2003.09384),
+  [ResearchGate](https://www.researchgate.net/publication/357230266_Investigating_the_efficiency_of_the_Asian_handicap_football_betting_market_with_ratings_and_Bayesian_networks)
+  ——13个英超赛季数据,比较传统1X2市场和亚洲让球盘市场效率,未直接读取全文,留作后续
+  研究"让球深浅"信号时的候选文献,不在本节展开。
