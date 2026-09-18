@@ -1848,3 +1848,206 @@ WebSearch摘要交叉印证多个独立来源所得,不是直接读取论文原�
   [ResearchGate](https://www.researchgate.net/publication/357230266_Investigating_the_efficiency_of_the_Asian_handicap_football_betting_market_with_ratings_and_Bayesian_networks)
   ——13个英超赛季数据,比较传统1X2市场和亚洲让球盘市场效率,未直接读取全文,留作后续
   研究"让球深浅"信号时的候选文献,不在本节展开。
+
+---
+
+## 2026-09-18 亚洲让球盘(Asian Handicap)市场效率研究 + 一个代码里确认存在的具体数据丢失缺口(`open_aw`/`last_aw`)
+
+### 为什么研究这个
+
+"2026-09-17"那节末尾已经点名把Constantinou (2020)的亚洲让球盘效率论文列为"留作后续研究
+'让球深浅'信号时的候选文献,不在本节展开"——翻遍笔记全文确认,除了这一句点名和"2026-09-10"
+那节把`compute_odds_drift_signal()`里`handicap_sig`的计算方式简单描述过一遍,**亚洲让球盘
+市场本身的效率、定价机制、"让球深浅"信号该怎么正确处理,从未被当成独立主题深入研究过**——
+这几天笔记密集研究过大小球水位(Shin去水)、欧赔平局代理、联赛进球基准、Dixon-Coles进球模型,
+唯独v8权重结构里占10/55的`handicap`这个分量,一直是笔记里最薄的一环。这次先读代码确认现状,
+再针对性查文献。
+
+### 读代码先确认:`handicap_sig`到底在算什么,发现一个和"欧赔"缺口同类型的具体数据丢失
+
+`v8_backtest_pipeline.py`第84-93行`load_workbook_data()`解析"多庄亚洲盘"sheet:
+
+```python
+(mid, league, kickoff, home, away, status, cid, cname,
+ open_hw, open_line, open_aw, last_hw, last_line, last_aw, last_time,
+ live_hw, live_line, live_aw, verify_status, fh, fa, fscore,
+ fill_status, snap_time, src, note) = r
+if mid not in matches or open_line is None or last_line is None:
+    continue
+ah_by_match[mid].append(dict(open_hw=open_hw, open_line=open_line,
+                              last_hw=last_hw, last_line=last_line))
+```
+
+**`open_aw`/`last_aw`(客队让球水位价格)在第87行被正常解包出来,但第92-93行存进`ah_by_match`
+的dict里根本没有这两个字段——原始数据行里其实有,构造dict这一步把它们静默丢弃了。** 这和
+"2026-09-10(续3)"那节发现的`euro_sig`缺口(欧赔胜平负三项赔率只保留平局、主胜客胜被丢弃)
+是完全同一类问题:**代码只留了让球盘"主队水位"(`hw`)一侧,丢了"客队水位"(`aw`)一侧**,
+后果是第137-150行`handicap_sig`/`trap_flag`的计算完全没有用到`aw`这个字段:
+
+- `handicap_sig`只看`last_line - open_line`(盘口深浅的原始数字变化方向),不是像`water_sig`
+  那样对`hw`/`aw`两个价格做`implied_prob_pair()`去水、再看隐含概率漂移方向——**换句话说,
+  大小球那边"线体漂移"(line_sig)和"水位漂移"(water_sig)是两个独立信号,但让球盘这边只做了
+  "线体漂移"的等价物,"水位漂移"的等价物从未被计算过,不是测过没用,是从未实现。**
+- `trap_flag`(陷阱盘检测:盘口变深但`hw`同时走高,或盘口变浅但`hw`同时走低)只用了单边的
+  `hw`变化方向做符号判断,没有用`hw`+`aw`联合去水算出真正的隐含概率漂移,是比`handicap_sig`
+  更粗糙的启发式。**而且`trap_flag`算出来之后,只是原样放进返回的dict里(第170行),从未参与
+  过composite计算(第152-157行`weights`字典里根本没有`trap`这一项),也从未在笔记任何一节
+  被拿去跟实际赛果做过回测验证——这是一个"写了但没人验证过、也不影响任何预测"的悬空字段。**
+
+### 查到的文献:亚洲盘效率的学术证据,两篇结论方向相反,必须如实并列
+
+**A. Hegarty & Whelan 团队(2023起,多篇关联论文,University College Dublin/CEPR工作论文,
+经WebSearch摘要交叉印证,未能直接WebFetch全文核实,原因见文末说明):**
+
+- **"Forecasting Soccer Matches With Betting Odds: A Tale of Two Markets"**
+  (*International Journal of Forecasting*,已发表版本,CEPR工作论文DP17949,MPRA
+  116925):用大样本欧洲足球比赛数据,**明确发现1X2(胜平负)市场存在系统性的
+  favourite-longshot bias(热门被低估、冷门被高估),但亚洲让球盘市场对同一批比赛
+  没有这个偏差**——用"新的、把让球盘赔率映射成概率的方法"(下面详述),把全样本
+  **168,460笔让球盘投注**按估计概率分成十等分,每一等分实际"全额中出"的频率和估计概率
+  对得上;用加权最小二乘法(WLS)回归"赛果 vs 估计概率",无法拒绝"斜率=1"这个完美校准
+  的原假设。**核心方法论创新**:让球盘(尤其亚盘常见的1/4球、3/4球这类"分盘")结算时
+  存在"平局退半/全退"的情况,传统"1/odds去水再归一化"的简单方法没有处理这种退款
+  可能性,Hegarty & Whelan给出了专门处理"有退款可能"投注的期望损失率估计方法。
+- **配套的姊妹论文"Estimating Expected Loss Rates in Betting Markets: Theory and
+  Evidence"和"Returns on Complex Bets: Evidence From Asian Handicap Betting on
+  Soccer"(以及"Do Gamblers Understand Complex Bets?")**:关键的可操作发现是——**每种
+  让球盘类型(整数盘/半球盘/1/4球盘/3/4球盘)发生"退款"的比例,在样本时间跨度内是稳定的、
+  且不依赖于当前那场比赛具体开出的赔率高低**,可以直接用历史平均退款率当成一个和赔率无关的
+  固定参数代入去水公式,不需要对每场比赛单独建模退款概率。同时发现:**不同让球盘类型之间
+  的实际损失率(玩家平均输钱比例)本身有系统性差异**——没有退款可能的盘口(如1/2球独赢盘)
+  损失率最高,半退款盘口次之,可以全额退款的盘口损失率最低,且这个差异本身可以由赔率
+  高低预测出来。
+- 这一组论文合起来给出的核心结论:**亚洲让球盘市场,只要用正确考虑退款概率的方法去水,
+  校准精度和效率明显优于传统1X2市场**——这是对本项目"欧赔平局代理"这个信号(9-10续3已经
+  测过、Shin去水法没有帮助)的一个新的对照视角:也许不是去水公式(multiplicative vs Shin)
+  的选择不重要,而是**1X2市场本身天生就比让球盘市场更难去水到位**,如果本项目要投入精力
+  改进某一个盘口子信号的去水方法,亚洲让球盘(而不是继续在欧赔或大小球水位上打转)可能是
+  文献证据最支持"值得做对"的那一个。
+
+**B. Constantinou (2020/2022), "Investigating the efficiency of the Asian handicap
+football betting market with ratings and Bayesian networks"(*Journal of Sports
+Analytics*, 8(3), 171-193,笔记"9-17"已经点名但未展开,这次补上):** 用13个英超赛季数据,
+把改良版pi-rating(Constantinou & Fenton提出的、按"实际净胜球 vs 评级预期差距"动态更新
+的球队评级系统,不需要完整MLE联合估计,比Dixon-Coles计算量小很多)喂给一个混合贝叶斯网络
+去同时预测1X2和让球盘结果,**结论与上面Hegarty & Whelan团队相反:亚洲让球盘市场和传统1X2
+市场共享同一类可被利用的低效率,存在能产生正回报的下注策略**。
+
+**这两组结论方向相反,必须原样并列、不能只采信其中一个:** Hegarty & Whelan用的是"用正确
+方法去水后,市场价格本身校准得好不好"这个角度(结论:好,亚盘比1X2更有效率);Constantinou
+用的是"能不能用一个独立的球队实力评级模型系统性跑赢亚盘价格"这个角度(结论:能)。这两个
+问题本身不矛盾**——市场对已知信息定价校准得很好,不代表没有独立于市场之外的新信息(比如
+pi-rating这类球队实力模型)可以再挖出一点edge,这和笔记"9-11续2""9-17"反复强调的"独立
+数据源才可能有增量、重新切分同一份市场信息没有增量"是同一个道理**——但两篇论文的具体
+数字/结论不能不加区分地一起引用,以后如果真要验证,应该分别对应到两件不同的事:(a)用
+Hegarty & Whelan的方法改进本项目对亚盘的去水精度(细信号处理问题);(b)参考Constantinou
+的pi-rating思路做一个独立于盘口的球队实力评级、去检验它和亚盘价格的分歧处是否有信息量
+(这属于"9-17"那节已经提出的"预测组合/去相关"框架,不是重新做另一个简易泊松模型)。
+
+**C. "陷阱盘"(trap game)概念:确认是从业者话术,没有查到可核实的学术研究直接验证它**——
+搜索结果里对"trap game"的描述("盘口开得反常吸引力强,引诱公众下注热门方,实际赛果却相反")
+全部来自博彩教学类网站,和笔记"9-11续"已经点名批评过的BettorEdge同一档次的内容营销性质,
+没有一篇给出可核实的原始样本或统计检验。**能找到的、真正有学术支撑的相关概念只有"反向盘口
+移动"(Reverse Line Movement)——这个概念笔记"9-10"那节已经查过、且当时的leader/follower
+二分法验证被推翻。** 现有代码里`trap_flag`的判定逻辑(盘口变深+hw同时走高,或盘口变浅+hw
+同时走低)本质上就是把RLM这个通用概念套用到"让球盘线体 vs 让球盘hw价格"这一对信号上的一个
+具体实现,**它是一个未经验证的启发式,不是抄自某篇文献的现成结论,以后要用它,必须先用现有
+历史数据(不需要新抓)独立回测它的方向判断准不准,而不是假设"陷阱盘"这个说法本身有可靠的
+理论支撑**。
+
+**D. 补充的机制性背景(让球盘结算规则,教学类来源,可信度中等,仅用于理解代码需要处理什么,
+不引用具体数字结论)**:1/4球、3/4球这类"分盘"让球线,结算时相当于把注单拆成两半分别按相邻
+的两条整数/半球线结算(例如让1¾球等价于一半按让1½球结算、一半按让2球结算),可能出现"全赢+
+半赢""半赢+半输"等组合结果,不是简单的输/赢/走盘三分类——这正是Hegarty & Whelan论文要专门
+处理"退款概率"的原因,也是本项目如果要正确算亚盘"水位漂移"信号时,不能直接照搬`water_sig`
+那种"两边"简单去水公式的地方(大小球的`open_over`/`open_under`理论上也有同样的1/4球分盘
+问题,只是笔记至今没有单独检查过`ou_by_match`里出现1/4球大小球线的比例有多高)。
+
+### 与本仓库数据的对应关系、接入建议(供以后决定是否做,不代下结论)
+
+1. **零成本、可以立刻做、纯数据管道修复,不改变现有信号计算逻辑**:在`load_workbook_data()`
+   第92-93行构造`ah_by_match`的dict时,把已经解包出来但被丢弃的`open_aw`/`last_aw`也存进去
+   (`dict(open_hw=open_hw, open_aw=open_aw, open_line=open_line, last_hw=last_hw,
+   last_aw=last_aw, last_line=last_line)`)。这一步和"9-10续3"当时为了测Shin方法先补回
+   `euro_sig`丢失的主胜/客胜赔率是同一类修复,风险很小,是后面所有验证的前提。
+2. **低成本、需要独立测试脚本(不要改`v8_backtest_pipeline.py`主逻辑)、复用现有历史数据**:
+   补上`aw`字段后,参照`water_sig`的写法,用`implied_prob_pair(hw, aw)`对开盘/临场两个
+   快照分别去水算出"让球盘主队隐含胜率",再取`sign(p_home_live - p_home_open)`得到一个新的
+   `ah_water_sig`,和现有纯线体方向的`handicap_sig`分开,离线跑一遍现有8天/3908场数据集,
+   看这个新信号单独的命中率/Brier score,以及它和现有`handicap_sig`方向一致/冲突时命中率
+   有没有差异——这是完全类比"9-10续3"验证Shin去水法的流程,不需要新抓任何数据。
+3. **低成本、同一批离线测试顺手做**:把从未验证过的`trap_flag`拿现有历史数据真正回测一次
+   (trap_flag=True的场次,大小球方向命中率是否显著偏离整体命中率),参照笔记里"六庄一致
+   偏小复盘"那种处理方式——如果回测显示没有信息量,应该像那次一样明确记录"陷阱盘启发式
+   没有验证出优势",而不是让这个字段继续留在代码里既不用也不删。
+4. **中等成本、只有前两步显示有信息量才值得做**:参照Hegarty & Whelan的方法,给不同类型的
+   让球盘(整数/半球/1/4球/3/4球)分别估计一个基于历史稳定退款率的去水修正,而不是对所有
+   让球盘类型都套用同一个简单的`implied_prob_pair`两边去水公式——这一步需要先统计本项目
+   历史数据里各类让球盘线出现的比例,如果1/4球分盘占比很低,这一步的收益可能不值得投入,
+   需要先用现有数据做这个比例统计再决定。
+5. **高成本、方向明确但不是这次要做的**:如果第2步显示`ah_water_sig`确实比纯线体方向的
+   `handicap_sig`更有信息量,再考虑参照Constantinou的pi-rating思路做一个独立于盘口的球队
+   实力评级(比现有Dixon-Coles联合MLE计算量小很多,理论上对本项目"K联赛125场""日职联
+   135场"这种小样本联赛更友好),去检验它和让球盘价格分歧处是否有可用的信息——这一步要
+   放进"9-17"那节已经建立的"预测组合/去相关"框架里评估,不要单独再造一个"两模型冲突时
+   信谁"的二元开关规则(那条已经被证明失败过一次)。
+6. **明确不建议做的事**:不要因为查到"trap game"这个说法就直接在composite里加一个基于
+   `trap_flag`的规则(比如"trap_flag=True时反向下注")——这个概念本身缺乏可核实的学术
+   支撑,和笔记"9-11续""9-12"已经点名批评过的营销类内容是同一个可信度量级,必须先按
+   上面第3条独立回测过,不能直接采信从业者话术。
+
+### 信息来源与可靠性说明
+
+**这次会话WebFetch再次对几乎所有测试过的域名整体拦截**(arxiv.org、mpra.ub.uni-muenchen.de、
+www.ucd.ie、cepr.org、ouci.dntb.gov.ua、www.semanticscholar.org、content.iospress.com、
+researchpublications.its.qmul.ac.uk、pena.lt、www.karlwhelan.com全部返回`EGRESS_BLOCKED`
+或连接失败),只有`raw.githubusercontent.com`确认可用(用于验证WebFetch工具本身没有整体失效,
+不是这次研究用到的信源)——和"9-16""9-17"两节记录的限制程度一致,**本节全部文献结论均只经
+WebSearch返回的摘要交叉印证多个独立来源得到,没有一篇论文原文被直接读取**,具体数字
+(168,460笔投注、13个英超赛季、"斜率=1"的WLS回归细节、pi-rating的具体学习率参数)以后有
+条件访问原文时必须重新核实,不能直接当成精确数字写进任何计算脚本。代码层面的发现
+(`open_aw`/`last_aw`被丢弃、`trap_flag`未参与composite也未被验证)是直接读取
+`v8_backtest_pipeline.py`源码验证过的,可信度和文献部分不同,是本节最有把握的部分。
+
+- Hegarty, N. & Whelan, K. "Forecasting Soccer Matches With Betting Odds: A Tale of Two
+  Markets."(*International Journal of Forecasting*,已发表):
+  [ScienceDirect](https://www.sciencedirect.com/science/article/pii/S0169207024000670),
+  [CEPR DP17949](https://cepr.org/publications/dp17949),
+  [CEPR VoxEU专栏](https://cepr.org/voxeu/columns/forecasting-soccer-matches-betting-odds-tale-two-markets),
+  [MPRA 116925 PDF](https://mpra.ub.uni-muenchen.de/116925/1/MPRA_paper_116925.pdf),
+  [UCD工作论文WP23_05 PDF](https://www.ucd.ie/economics/t4media/WP23_05.pdf),
+  [UCD Research Repository](https://researchrepository.ucd.ie/entities/publication/4f7f0314-77fd-4111-a54b-7001ba524fe3),
+  [ResearchGate](https://www.researchgate.net/publication/368848754_Forecasting_Soccer_Matches_With_Betting_Odds_A_Tale_of_Two_Markets)
+  ——均未能直接WebFetch核实全文。
+- Hegarty, N. & Whelan, K., "Estimating Expected Loss Rates in Betting Markets: Theory and
+  Evidence": [karlwhelan.com PDF](https://www.karlwhelan.com/Papers/Overround.pdf)(未能
+  直接WebFetch)
+- Hegarty, N. & Whelan, K. (2023), "Returns on Complex Bets: Evidence From Asian Handicap
+  Betting on Soccer."(后发表于*Review of Behavioral Finance*):
+  [karlwhelan.com PDF](https://www.karlwhelan.com/Papers/RBF.pdf),
+  [Emerald期刊页](https://www.emerald.com/insight/content/doi/10.1108/rbf-11-2023-0314/full/html),
+  [IDEAS/RePEc](https://ideas.repec.org/a/eme/rbfpps/rbf-11-2023-0314.html)
+  ——均未能直接WebFetch核实全文。
+- Hegarty, N. & Whelan, K., "Do Gamblers Understand Complex Bets? Evidence From Asian
+  Handicap Betting on Soccer."(CEPR DP18153):
+  [CEPR](https://cepr.org/publications/dp18153),
+  [MPRA 117244 PDF](https://mpra.ub.uni-muenchen.de/117244/1/ComplexBets.pdf)
+  ——均未能直接WebFetch核实全文。
+- Constantinou, A.C. (2022), "Investigating the efficiency of the Asian handicap football
+  betting market with ratings and Bayesian networks." *Journal of Sports Analytics*, 8(3),
+  171-193: [arXiv 2003.09384](https://arxiv.org/pdf/2003.09384),
+  [SAGE/IOS Press期刊页](https://journals.sagepub.com/doi/full/10.3233/JSA-200588),
+  [ResearchGate](https://www.researchgate.net/publication/357230266_Investigating_the_efficiency_of_the_Asian_handicap_football_betting_market_with_ratings_and_Bayesian_networks)
+  ——均未能直接WebFetch核实全文,笔记"9-17"已列出此文献但未展开,这次补上摘要级结论。
+- pi-rating系统(Constantinou & Fenton,球队攻防动态评级、按净胜球与预期差距更新):
+  [penaltyblog文档](https://penaltyblog.readthedocs.io/en/latest/ratings/pi.html),
+  [pena.lt博客说明](https://pena.lt/y/2025/04/14/pi-ratings-the-smarter-way-to-rank-football-teams/)
+  ——均未能直接WebFetch核实全文,仅经WebSearch摘要获得。
+- "陷阱盘"(trap game)从业者话术,可信度低,仅作方向性线索、不作为证据引用:
+  [sportsprediction.asia](https://www.sportsprediction.asia/blog-detail/355/spotting-trap-games-avoid-common-betting-pitfalls.html)
+- 亚洲让球盘1/4球分盘结算机制(教学类来源,机制性描述可信度中等,不涉及具体统计数字):
+  [Wikipedia Asian handicap](https://en.wikipedia.org/wiki/Asian_handicap),
+  [betlance88 1/4球说明](https://betlance88.com/asian-handicap/asian-handicap-quarter-goals/),
+  [oddsgpt让球盘计算器说明](https://www.oddsgpt.com/asian-handicap-calculator/en)
+
+---
