@@ -2051,3 +2051,182 @@ WebSearch返回的摘要交叉印证多个独立来源得到,没有一篇论文�
   [oddsgpt让球盘计算器说明](https://www.oddsgpt.com/asian-handicap-calculator/en)
 
 ---
+
+## 2026-09-19 confidence_prob的后处理校准方法该怎么选:Platt/Beta/直方分箱,以及诊断校准本身的ECE也有分箱偏差
+
+### 为什么研究这个,以及和已有结论的关系
+
+"2026-09-11(续5)"已经把v8模型的`confidence_prob`做过一次严格的校准检验,结论是**比"统一用
+整体命中率当固定概率"这个最简单基线还差**(Brier: train 0.2516 vs 0.2494基线,test 0.2523
+vs 0.2500基线),并且在文末给出了一句尚未展开的建议:"如果以后想让这个信心分级真正可用,需要
+针对confidence_prob本身做校准(比如isotonic regression或Platt scaling这类标准的post-hoc
+校准方法)"。这次翻遍笔记确认**这句建议提出之后,再没有一节展开研究过"到底该用哪种校准方法、
+为什么"**——这正是任务清单里"样本量与统计显著性在体育博彩回测里的正确用法"这条主题在
+"校准"这个具体子问题上此前没有深挖的部分,而且直接对应代码里一处此前没被指出过的具体事实:
+`v8_backtest_pipeline.py`第159-161行
+
+```python
+prob_over = max(20, min(80, 50 + composite * 20))
+direction = 'over' if prob_over >= 50 else 'under'
+confidence_prob = prob_over if direction == 'over' else 100 - prob_over
+```
+
+**这个`composite -> confidence_prob`的映射,是一个手写的线性压缩公式(乘20、限幅在
+[20,80]),从未用任何历史数据拟合过、也没有任何统计依据**——`composite`本身是四个子信号
+按20/15/10/10加权平均后落在[-1,1]的一个分数(第152-157行),"乘20加50"纯粹是让它看起来像
+一个"50%~80%"区间的百分比,不是通过让预测概率匹配真实频率这个校准目标反推出来的系数。这和
+"9-11续5"测出来的"confidence_prob不能当真实概率用"这个结果完全对得上——那次结果不是
+"校准方法用错了",而是**目前根本没有做过校准这一步**,composite到confidence_prob之间从来
+没有一次拟合。
+
+### 查到的东西(这次WebFetch对几乎全部域名仍然被拦截,只有`raw.githubusercontent.com`能用,
+细节见文末诚实说明)
+
+**Part A:三种标准post-hoc校准方法,核心是"用多少参数去拟合校准曲线",样本量决定该用哪种**
+
+1. **Platt scaling(logistic/sigmoid校准)**:用一条sigmoid曲线
+   `P(y=1|f) = 1 / (1 + exp(A·f + B))`把原始分数`f`(这里对应`composite`,不是已经被
+   压成百分比的`confidence_prob`)重新映射,只有A、B两个参数,用极大似然拟合。**样本量
+   要求最低**——多个独立来源一致指出,当校准集规模小于约1000~2000时Platt scaling优于
+   isotonic regression,因为isotonic的非参数灵活性在小样本下容易过拟合;这个约1000的
+   分界点在多篇文献里反复出现,是这几种方法里唯一给出了具体样本量门槛的比较。**局限**:
+   sigmoid假定校准误差是单调、对称的一条S形曲线,如果真实的校准偏差本身不单调,Platt
+   scaling这个参数形式再怎么拟合也拟合不出来。
+2. **Isotonic regression(保序回归)**:非参数,只要求映射函数单调不减,用逐段常数拟合
+   校准曲线,不假设具体形状,能修正任何单调的失真,但灵活性正是过拟合风险的来源。**多个
+   来源一致给出"约1000个样本以上isotonic开始不劣于甚至优于Platt scaling"这个交叉点**,
+   低于这个量级isotonic的额外灵活性大概率只是在拟合噪声。
+3. **Beta calibration(Kull, Silva Filho & Flach, 2017, AISTATS)**——介于两者之间的
+   一个参数化方案,不是简单的插值折衷,而是有专门的理论动机:用三参数公式
+   `g(ŝ) = 1 / (1 + exp(-c)·ŝ^a / (1-ŝ)^b)`(基于beta分布推导,拟合方式和logistic
+   回归一样简单,只是先对分数做`log(ŝ/(1-ŝ))`这类变换后再套logistic回归)。论文自己指出的
+   Platt scaling的一个具体缺陷,直接和本项目场景相关:**logistic校准族不包含恒等映射,
+   意味着如果一个分类器本来就已经校准得还不错,Platt scaling可能反而把它变得更不校准**;
+   beta calibration的参数族包含恒等映射,不会有这个"越校准越差"的风险,同时只比Platt
+   多一个参数,过拟合风险明显低于isotonic。
+
+**Part B:本项目"9-11续5"记录的实际miscalibration模式,不是单调的,这对选哪种方法有直接影响**
+
+重新看"9-11续5"test集分箱表:`[50,53)`实际命中率51.5%、`[53,58)`降到48.7%、`[58,63)`
+回升到50.3%、`[63,68)`又跳到65.6%——**这个"预测概率越高、实际命中率先降后升"的模式本身
+不是单调的**,而Platt scaling的sigmoid假设隐含"校准偏差应该是模型系统性偏高或偏低这种
+单调关系",对这种先降后升的非单调模式,参数形式再怎么拟合都拟合不出中间那个"凹陷"。这是
+这次研究里一个此前没人指出过的具体张力:**"9-11续5"提议的isotonic regression理论上能
+处理这种非单调形状,但train集只有1901场,卡在文献给出的"约1000~2000场"门槛附近偏低的
+一侧,isotonic在这个量级下过拟合风险不低**;而Platt scaling样本量安全,但函数形式本身
+可能覆盖不了"先降后升"这个已经实测观察到的真实模式。**Beta calibration作为三参数方案,
+是这次文献调研里对这个具体张力最直接的回应**——比Platt多一个自由度,理论上能容纳一部分
+非单调弯曲(beta分布的形状比单纯logistic更灵活),同时参数量仍然远低于isotonic对应的
+自由度,是样本量卡在临界点时值得优先尝试的选项。**这不代表beta calibration一定能修复
+这个"先降后升"模式**——三个参数能拟合的形状仍然有限,如果真实的非单调程度比beta calibration
+能表达的更复杂,还是需要真正测过才知道,不能只凭这次的理论分析下结论。
+
+**Part C:一个更基础的问题——诊断校准用的ECE指标本身,也有"分箱"这个自由度带来的偏差,
+"9-11续5"用的固定5个百分点宽度分箱可能低估或高估了真实校准误差**
+
+查到的通用ECE文献(Błasiok, Gopalan, Hu & Nakkiran等人的工作)指出两个和分箱直接相关的
+问题,都可以直接对上"9-11续5"那张分箱表的具体情况:
+
+1. **分箱数量本身是偏差-方差的权衡**:分箱越细,对"真实条件命中率"的估计偏差越小,但
+   每个箱子里的样本量越少、方差越大;分箱越粗则反过来。"9-11续5"的分箱表里
+   `[68,73)`这一档**n=1**,笔记原文自己也标注了"没有意义"——这不是个例外,是这类固定
+   宽度分箱在样本量不够、且confidence_prob本身集中在中间区间(现有代码限幅在
+   [20,80]/[50,80])时几乎必然出现的问题:靠近上限的箱子样本量会系统性偏少,导致那个
+   区间的"实际命中率"估计方差极大,不能直接采信,但固定宽度分箱又没有一种自然的方式去
+   反映"这个数字其实不可靠"这件事。
+2. **分箱边界本身的选择会系统性影响算出来的ECE数字**,在最坏情况下,某个分箱内部真实
+   存在的校准误差可能被平均效应完全抵消而显示不出来,而边界一变,同一份数据可能算出
+   完全不同的ECE。这意味着**"9-11续5"报告的ECE(train 4.48pp/test 4.77pp)这两个具体
+   数字,本身多少依赖于当时选定的分箱边界(50/53/58/63/68/73这组数字),换一种分箱方式
+   重算一遍,数字会变,不代表之前的定性结论(confidence_prob比基线差)会变,但这两个
+   具体百分点数字不应该被当成精确值反复引用**。
+3. **更稳健的替代方案,这次查到两类**:(a) **SmoothECE**(Błasiok & Nakkiran, ICLR
+   2024)——用核平滑(RBF kernel)代替硬分箱,得到一个不依赖分箱边界选择、且理论上
+   "一致"(consistent)的校准误差估计,有配套开源实现(`relplot`包);(b) **Bayesian
+   Binning into Quantiles(BBQ, Naeini et al.)**——不是固定选一种分箱方案,而是对多种
+   可能的分箱方案(不同的分箱数、不同的边界)做贝叶斯模型平均,用后验加权综合多个分箱方案
+   的校准估计,而不是依赖研究者手动选的某一组边界。**这两种方法这次都只查到方法概述,没有
+   拿到可以直接核实的实现细节或论文原文(见文末说明),但作为"如果以后要重新做一次更严谨的
+   校准检验,不要再用手工挑的5个百分点固定分箱"这条建议的具体候选方案,已经足够记录下来。**
+
+**Part D:关于"多少校准数据算够"这个问题,查到的数字都是经验性的、跨领域的,不是体育博彩
+专门文献给出的,需要如实说明局限**——查到的具体例子(不同研究里为了系统性研究这个问题,
+把校准集大小从32到8192按2的倍数变化)以及另一处提到"5000个点做Platt scaling是标准设置,
+1000个点是资源紧张时的下限"这类经验描述,**都来自机器学习/风险预测领域的一般性研究,没有
+一篇是体育博彩概率校准的专门文献**,和笔记里之前几节(尤其"9-11续4"Walsh & Joshi那节,
+唯一一篇是NBA体育博彩场景的)相比,这次的信息来源领域跨度更大,数字的量级可以参考,但不能
+当成体育博彩场景验证过的精确门槛。
+
+### 与本仓库数据的对应关系、接入建议(供以后决定是否做,不代下结论)
+
+1. **零成本、可以立刻做、完全复用现有数据管线**:在独立脚本里(不要改
+   `v8_backtest_pipeline.py`本身,参照"9-10续3"验证Shin方法、"9-11续5"做校准检验时
+   一贯的做法)复用`calibration_check_v8.py`已经建立的train(9/2-9/5,n=1901)/test
+   (9/6-9/9,n=2007)日期切分,**但这次校准的输入应该是`composite`这个[-1,1]的原始分数,
+   不是已经被"乘20加50、限幅在[20,80]"压缩过的`confidence_prob`**——先在train集上分别
+   拟合Platt scaling(2参数)和beta calibration(3参数)两个校准映射(样本量介于文献给出
+   的"Platt安全区"和"isotonic交叉点"之间,isotonic本次不建议作为首选,过拟合风险文献里
+   说得比较明确),在test集上分别算Brier score和ECE,和"9-11续5"已经记录的三个基线数字
+   (原始confidence_prob的0.2523、固定概率基线的0.2500)直接对比。
+2. **同一批测试顺手做的诊断**:除了固定宽度分箱的ECE,额外算一版基于分位数(而不是固定
+   百分点宽度)的分箱ECE作为交叉检验(比如按test集`confidence_prob`排序后分成5等份,
+   保证每箱样本量大致相等,不会再出现"9-11续5"里`[68,73)`那种n=1的箱子)——如果两种分箱
+   方式算出的ECE数字差别不大,说明"9-11续5"的结论对分箱选择不敏感,可信度更高;如果差别
+   明显,说明需要更谨慎地解读固定宽度分箱的具体数字。这一步不需要新工具,是纯统计计算。
+3. **中等成本、只有第1步显示校准后的Brier/ECE确实优于现有基线,才考虑做**:如果
+   Platt/beta校准后的概率显著优于"9-11续5"的两个基线,再考虑把拟合出来的校准映射系数
+   (A、B,或beta calibration的a、b、c)固化进`v8_backtest_pipeline.py`,替换掉第159-161行
+   那个手写的线性压缩公式——但要明确这组系数是在当前8天/3908场这个特定数据集上拟合出来的,
+   换一批新数据(比如新的日期范围、新增联赛)之后大概率需要重新拟合,不能一次拟合永久固定,
+   这和composite本身的line/water/euro/handicap权重(20/15/10/10)未来如果要调整时面临的
+   问题是同一类。
+4. **明确不建议做的事**:不要因为isotonic regression"理论上更灵活、能处理非单调模式"就
+   直接拿来用——train集n=1901卡在文献给出的安全门槛附近偏低的一侧,而且本项目此前已经在
+   Dixon-Coles(9-13)、confidence_prob本身(9-11续5)两处都验证过"小样本下更灵活的模型
+   容易过拟合"是真实发生过的问题,不是理论假设,isotonic regression面临的是同一类风险。
+
+### 信息来源与可靠性说明
+
+**这次会话WebFetch再次对几乎所有测试过的学术/文档域名整体拦截**(arxiv.org、
+scikit-learn.org、proceedings.mlr.press均返回`EGRESS_BLOCKED`),和"9-16""9-17""9-18"
+三次记录的限制程度一致;唯一成功直接读取原始内容(非搜索引擎摘要)的是
+`raw.githubusercontent.com/scikit-learn/scikit-learn`仓库的`calibration.rst`文档源文件,
+里面sigmoid/isotonic的公式和"CalibratedClassifierCV用交叉验证避免校准器看到拟合基础模型
+用过的数据"这部分内容是直接读到的,可信度高于本节其余部分;beta calibration的具体公式
+(三参数、`log(ŝ/(1-ŝ))`变换）、Platt/isotonic约1000~2000样本量交叉点、SmoothECE/BBQ的
+方法概述,均只经WebSearch返回的摘要交叉印证多个独立来源得到,没有一篇论文原文被直接读取,
+以后有条件访问原文时应重新核实具体公式和数字。
+
+- Platt scaling原始方法与sigmoid公式、样本量小时相对isotonic更稳健:综合多个来源交叉印证,
+  [scikit-learn calibration文档(经raw.githubusercontent.com直接读取源文件)](https://raw.githubusercontent.com/scikit-learn/scikit-learn/main/doc/modules/calibration.rst),
+  [Wikipedia Platt scaling词条](https://en.wikipedia.org/wiki/Platt_scaling),
+  [Niculescu-Mizil & Caruana, "Predicting Good Probabilities With Supervised Learning"](https://www.cs.cornell.edu/~alexn/papers/calibration.icml05.crc.rev3.pdf)
+- Kull, Silva Filho & Flach (2017), "Beta calibration: a well-founded and easily
+  implemented improvement on logistic calibration for binary classifiers", AISTATS 2017:
+  [PMLR论文页](https://proceedings.mlr.press/v54/kull17a.html)(未能直接WebFetch,
+  经WebSearch摘要获得三参数公式与"logistic校准不含恒等映射"这一核心论点)
+- 约1000~2000样本量作为Platt scaling与isotonic regression性能交叉点(多篇独立来源一致
+  给出这个量级,但没有一篇给出严格的理论推导,均为经验观察):经WebSearch摘要交叉印证多个
+  独立来源,未直接读取任何一篇原文
+- 直方分箱(histogram binning)样本复杂度随"模型可输出的不同概率值数量"线性增长、在校准
+  数据稀缺时不如Platt scaling高效:经WebSearch摘要交叉印证,未直接读取原文
+- ECE的分箱数量偏差-方差权衡、分箱边界选择对ECE数值的系统性影响:综合搜索结果摘要,核心
+  参考[Błasiok, Gopalan, Hu & Nakkiran等关于校准度量"良态性"(well-behaved-ness)的系列
+  工作](https://arxiv.org/pdf/2405.15709)(未能直接WebFetch)
+- Błasiok & Nakkiran (2024), "Smooth ECE: Principled Reliability Diagrams via Kernel
+  Smoothing", ICLR 2024:[arXiv 2309.12236](https://arxiv.org/abs/2309.12236),
+  [OpenReview](https://openreview.net/forum?id=XwiA1nDahv)(均未能直接WebFetch,方法
+  概述——RBF核平滑、`relplot`开源实现——经WebSearch摘要获得)
+- Naeini, Cooper & Hauskrecht, "Obtaining Well Calibrated Probabilities Using Bayesian
+  Binning"(BBQ,对多种分箱方案做贝叶斯模型平均):[dbmi.pitt.edu PDF链接](https://www.dbmi.pitt.edu/wp-content/uploads/2022/10/Obtaining-well-calibrated-probabilities-using-Bayesian-binning.pdf)
+  (未能直接WebFetch,仅经WebSearch摘要获得方法概述,未核实具体的模型平均公式)
+
+**方法论诚实说明**:这次和"9-16"到"9-18"几节记录的情况一致,几乎全部具体数字(尤其
+"约1000~2000样本量交叉点""32到8192按2倍数变化"这类量化描述)都来自跨领域(机器学习/
+医疗风险预测)的一般性文献,不是体育博彩专门场景验证过的门槛,而且没有一篇被直接读取原文——
+"接入建议"第1条给出的做法(在独立脚本里用已有数据实测Platt/beta校准后的Brier/ECE,直接
+和现有基线数字比较)本身不依赖这些外部数字是否精确,是用本项目自己的数据说话,这是本节
+最应该被信任、也是接下来如果要推进这个方向应该优先做的部分,而不是先假设某个校准方法
+"理论上应该更好"。
+
+---
