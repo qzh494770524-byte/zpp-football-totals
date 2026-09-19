@@ -842,3 +842,1391 @@ Brier score/ECE对比基线,而不是单看单调梯度。
 本身做校准(比如isotonic regression或Platt scaling这类标准的post-hoc校准方法,把模型输出的
 原始分数重新映射到"跟实际命中率对齐"的概率),而不是继续调整composite的权重结构——权重
 调整改变的是方向判断,不直接解决"数字本身报得准不准"这个校准问题。
+
+---
+
+## 2026-09-12 大小球市场公众"压大"偏好的真实证据 + 一个成本更低、真正独立于赔率的进球代理信号(shots/corners评级)
+
+### 为什么研究这个
+
+笔记里有两处直接相关但都留了明显缺口:(1) "水位一致性对'大'方向有效、对'小'方向基本无效",
+原因写的是"初步判断……散户天然偏爱押大球",**没有引用任何文献,是本项目自己的猜测**;
+(2) 9-11续2那条"元结论"说重新组合现有盘口信号已经碰到理论天花板,真正可能有增量信息的
+只剩"独立数据源(完整联赛赛程,喂给真Dixon-Coles)"和"更早于盘口的信息(伤停/阵容)"两条
+路——但9-11续3已经测过第一条路,成本高(需要整赛季逐场比分)且这次三个联赛全部落空。
+这次定向查了两件事:大小球公众下注偏好到底有没有真实数据支撑(而不是猜测),以及有没有
+一个介于"重新切分盘口"和"抓整赛季比分做全联赛联合MLE"之间的、成本更低但仍然独立于赔率
+本身的进球信息代理。两个问题查到的文献恰好能连起来看,所以写在同一节。
+
+### Part A: 压"大"偏好——真实下注量数据,而不是猜测
+
+**Flepp, R., Nüesch, S. & Franck, E. (2016). "Does Bettor Sentiment Affect Bookmaker
+Pricing?" *Journal of Sports Economics*, 17(1), 3-11.** 这篇直接用博彩公司的真实下注量
+数据(不是赛果、也不是赔率反推,是实打实的volume)研究大小球2.5球市场:
+
+- **数据**:全球4,491场比赛(220个不同联赛/赛事,2011年11月1日-12月7日),赔率来自
+  oddsportal.com,剔除372场对不上赔率的比赛后最终样本4,119场——覆盖220个联赛这一点
+  值得注意,比五大联赛单一联赛的研究更接近本项目"大量中小/非顶级联赛"的数据结构。
+- **发现1(压大偏好,比笔记原有猜测严重得多)**:平均一场比赛,压"大2.5球"的下注量占比
+  **超过80%**——不是"略多",是压倒性一边倒,作者给的解释是"给高比分比赛加油助威天然比押
+  '不进球'更有吸引力"。这条**用真实volume数据支持了**笔记里"散户天然偏爱押大"这个此前
+  没有引用来源的判断,而且量级比想象的更极端。
+- **发现2(但这个偏好没能转化成可利用的定价漏洞)**:即使下注量失衡到这个程度,论文**没有
+  发现**这个失衡对应任何系统性的"大/小"回报率偏差——押大和押小的长期回报率没有显著不同。
+  作者的解释是价格透明度太高(玩家能轻易跨庄家比价),约束了庄家去系统性利用这种情绪定价。
+- **对本项目的意义,修正而非单纯支持**:这条结果**部分支持、部分修正**了笔记原有的判断——
+  支持"公众确实系统性偏大"这个事实本身(有真实volume数据、量级比猜测更极端);但**修正**了
+  隐含的推论"所以小方向应该有隐藏的价值"——真实证据说明即使volume偏得这么离谱,pricing
+  依然没有系统性偏差留给下注者去捡。这和笔记里已经验证过的两条负结果其实是同一个机制的
+  两次重复出现:"六庄一致偏小反买大球没有优势"、"水位一致性对小方向基本无效"——**光凭
+  "大家都在押哪一边"这个信息本身,推不出"另一边有value"这个结论,除非能额外证明这一场/
+  这批公司的定价确实没跟上真实概率(比如笔记里已经在用的CLV检验),不能停在"下注量不对称"
+  这一步就下结论。**
+- **交叉证据(方向性参考,不直接引用为足球市场证据)**:Paul & Weinbach (2002, *Journal
+  of Sports Economics*)在NFL大小球市场发现,当盘口总分显著高于联赛均值(高5/6/7分以上)时,
+  反向买"小"的策略能拒绝"公平赌注"的原假设,虽然全样本层面拒绝不了;Woodland & Woodland
+  (2010, *Economics Bulletin* 30(4), 3122-3127)在NHL总进球≥5.5的大小球上测出"小"整体
+  胜率54.2%(p=0.00075,显著)。这两篇都是北美职业联赛(橄榄球/冰球),不能直接套到足球,
+  但提供一个跨运动一致的模式:**"盘口总分显著偏离该类赛事历史均值"这个子集,比不区分盘口
+  高低的全样本更可能留下可利用空间**——这提示以后如果还想深挖大小球方向性偏差,值得先按
+  "盘口相对该联赛/赛事类型历史均值的偏离程度"分组,而不是像笔记里已经测过的"全票一致/
+  偏离幅度/参与公司数"那样在同一份漂移信号上继续切法(那几种切法已经证明测不出稳定优势)。
+
+### Part B: 有没有比"抓整赛季逐场比分做真Dixon-Coles"成本更低、又真正独立于赔率的进球代理?
+
+**Wheatcroft, E. (2020). "A profitable model for predicting the over/under market in
+football." *International Journal of Forecasting*, 36(3), 916-932.**(方法学姊妹篇:
+Wheatcroft, "Forecasting football matches by predicting match statistics", arXiv
+2001.09097 / *Journal of Sports Analytics*, 2021)提出了**GAP(Generalised Attacking
+Performance)评级**,核心思路和本节要回答的问题正好对上:
+
+- **方法**:每支球队维护四个动态评级(主场进攻、主场防守、客场进攻、客场防守),每场赛后
+  按"实际观测值 vs 评级预期值"的差距更新——结构上类似Elo/Dixon-Coles的动态更新机制,但
+  **更新用的输入不是进球数,而是射门数/射正数/角球数这类比赛过程统计量**。用这些评级预测
+  下一场的比赛统计量,再把预测的统计量转换成大小球2.5球概率。
+- **关键结果**:在10个欧洲联赛、12年数据上测试,**用射门数+角球数(不用进球数本身)作为
+  评级输入,比用进球数本身作为输入的预测力更强**;用这个信号做平水价值投注,总计约68,672
+  注上取得约0.8%的平均利润率。
+- **机制解释**:进球本身受"射正之后进不进"这种高方差的临门一脚运气影响,而射门数/射正数/
+  角球数是更高频、更低噪声的观测量(一场比赛可能只有1-2个进球,但可能有10-20次射门)——
+  用它们代替进球数去估计球队真实攻防强度,收敛更快、需要的样本更小。**这正好直接对应笔记
+  "Dixon-Coles续3"那节记录的已知实操坑#2(K联赛125场对12队24+2参数的联合MLE,小样本
+  容易过度自信)——shots-based评级是缓解同一个"小样本估计球队真实强度"问题的另一条路,
+  不需要先解决"能不能抓到完整联赛逐场比分"这个更大的数据工程问题就能试。**
+- **和xG方法论的关系(直接回应任务里提到的xG方向)**:真正的xG(基于射门位置/角度/身体
+  部位/防守压迫构建的shot quality模型)需要逐次射门的位置和情境数据,这类数据通常只有
+  Opta/StatsBomb这类商业数据商为顶级联赛提供,本项目覆盖的K联赛/日职联/青年队/卡塔尔
+  联赛/乌兹别克联赛这类中小赛事基本不可能拿到——**完整xG模型对本项目不现实,不建议往这个
+  方向投入。GAP评级本质上是"xG的简化替代品":用射门数量/角球数量这种粗粒度统计量代替射门
+  质量,数据门槛低得多,更适合本项目的数据结构。**
+- **信息可靠性的诚实说明(重要)**:ScienceDirect、arXiv、SAGE(journals.sagepub.com)、
+  LSE eprints、ResearchGate、Semantic Scholar、zora.uzh.ch、sonar.ch这几个域名**这次
+  全部被当前环境的出站代理拦截**,无法直接WebFetch原文核实。上面GAP评级的更新机制、概率
+  转换方式(是否用泊松分布、如何把预测的比赛统计量映射回进球分布)、68,672注/0.8%这两个
+  数字,**都只是通过搜索引擎(WebSearch)返回的摘要交叉印证得到的,不是拿到论文原文核实过
+  的**——和笔记"Dixon-Coles"那节遇到同样的代理拦截问题时的处理方式一致,如实标注,不代表
+  可以直接当成精确公式或最终数字去写实现代码,以后有条件访问原文时应该重新核实一遍,尤其是
+  评级更新公式的具体参数和"两种价值投注策略"的具体定义。
+
+### 与本仓库数据的对应关系:接入前的数据缺口
+
+确认:`nowgoal_collect.py`和`v8_backtest_pipeline.py`目前**完全没有采集任何比赛过程统计量**
+(射门/射正/角球/控球率一类字段)——`fetch_h2h_html()`/`parse_h2h_standings()`只抓
+Total/Home/Away/Last6四行的"场次-进球-失球-名次"汇总(与前面Dixon-Coles那节记录的数据
+结构相同),不涉及射门/角球。搜索引擎摘要显示nowgoal通用平台"提供射门、角球等详细赛况
+统计",但这是对该网站的泛泛描述,**不是针对本项目实际覆盖的联赛/赛事(K联赛、日职联、
+青年队赛事、卡塔尔联赛、乌兹别克联赛)历史页面逐一核实过的**,不能假设覆盖率和五大联赛
+一样高——参照笔记"薄市场"那节的教训,青年队/小联赛比赛很可能同时缺进球历史和缺射门统计,
+解决了一个数据缺口不代表自动解决另一个。接入建议分层:
+
+1. **低成本、可以先做、纯确认性质**:挑1-2个本数据集里覆盖场次多的联赛(不是U19这种小众
+   赛事),像当初核实Dixon-Coles联赛JSON接口那样,实际打开nowgoal的比赛详情历史页面,
+   确认射门/射正/角球是否有逐场记录、能否批量抓取。如果连这一步数据都拿不到,后面不用
+   往下做。
+2. **中等成本、独立脚本、不改v8主逻辑**:如果数据可得,挑1-2个覆盖最好的联赛写一个独立的
+   简化版GAP评级脚本(不需要照搬论文精确参数,可以先用指数加权移动平均模拟动态评级),
+   对每场比赛产出"射门/射正预期值差"这个新信号,离线和现有盘口漂移模型的历史预测比较
+   命中率与Brier score/ECE(不是只看命中率,参照confidence_prob校准检验那节的教训)。
+3. **只有第2步显示出明确、样本量足够的提升,才考虑并入`v8_backtest_pipeline.py`的
+   composite**,而且要专门检查小联赛/青年队比赛在射门数据覆盖率上是否够用——这类比赛
+   数据稀疏是笔记里反复验证过的结构性问题,不是新信号能绕开的。
+
+### 信息来源
+
+- Flepp, R., Nüesch, S. & Franck, E. (2016). "Does Bettor Sentiment Affect Bookmaker
+  Pricing?" *Journal of Sports Economics*, 17(1), 3-11. 摘要与数据细节交叉印证自:
+  [SAGE摘要页](https://journals.sagepub.com/doi/abs/10.1177/1527002514521427),
+  [ResearchGate](https://www.researchgate.net/publication/254938176_Does_Bettor_Sentiment_Affect_Bookmaker_Pricing),
+  [University of Fribourg PDF链接](https://www.unifr.ch/tim/en/assets/public/uploads/Publication%20list/2016/Journal%20of%20Sports%20Economics-2016-Flepp-3-11.pdf)
+  (unifr.ch、zora.uzh.ch、sonar.ch均被当前环境代理拦截,未能直接WebFetch原文,以上结论
+  经搜索引擎摘要交叉印证,非直接读取全文)
+- Paul, R. J. & Weinbach, A. P. (2002). "Market Efficiency and a Profitable Betting Rule:
+  Evidence From Totals on Professional Football." *Journal of Sports Economics*, 3(3).
+  [SAGE页面](https://journals.sagepub.com/doi/10.1177/1527002502003003003)(摘要级信息)
+- Woodland, B. M. & Woodland, L. M. (2010). "Market Efficiency and the NHL totals betting
+  market: Is there an under bias?" *Economics Bulletin*, 30(4), 3122-3127.
+  [Academia.edu](https://www.academia.edu/65674388/Market_Efficiency_and_the_NHL_totals_betting_market_Is_there_an_under_bias),
+  [ResearchGate](https://www.researchgate.net/publication/227410468_Market_Efficiency_and_the_NHL_totals_betting_market_Is_there_an_under_bias)
+- Wheatcroft, E. (2020). "A profitable model for predicting the over/under market in
+  football." *International Journal of Forecasting*, 36(3), 916-932.
+  [ScienceDirect](https://www.sciencedirect.com/science/article/abs/pii/S0169207019302559),
+  [LSE eprints](https://eprints.lse.ac.uk/103712),
+  [IDEAS/RePEc](https://ideas.repec.org/a/eee/intfor/v36y2020i3p916-932.html),
+  [ResearchGate](https://www.researchgate.net/publication/338797768_A_Profitable_Model_For_Predicting_the_OverUnder_Market_in_Football)
+  (ScienceDirect/LSE/ResearchGate/Semantic Scholar均被当前环境代理拦截,方法与数字经
+  搜索引擎摘要交叉印证,非直接读取全文,细节以后需要重新核实)
+- Wheatcroft, E. "Forecasting football matches by predicting match statistics."
+  [arXiv 2001.09097](https://arxiv.org/abs/2001.09097),
+  [SAGE/Journal of Sports Analytics](https://journals.sagepub.com/doi/full/10.3233/JSA-200462)
+  (同样被代理拦截,未直接读取全文)
+- nowgoal平台一般性介绍(射门/角球等赛况统计,非本项目覆盖联赛的逐一核实):搜索引擎摘要
+  交叉印证,未直接访问具体比赛历史页面。
+
+---
+
+## 2026-09-13 Dixon-Coles小样本收缩先验(shrinkage prior):补上"续3"里记录的已知实现缺口#2
+
+### 为什么研究这个,以及和已有代码的对应关系
+
+"2026-09-11(续3)"那节真正把Dixon-Coles联合MLE实现出来后,明确留了三个已知缺口没解决,
+第2条是:"训练样本对要联合估计的参数量来说偏小(K联赛125场对12队24+2个参数,英超307场对
+20+队40+2个参数),小样本MLE容易对个别球队的参数估计过度自信,标准做法是对α/β加收缩先验
+(向联赛均值收缩),这次没做。" 这次定向查了"收缩先验/hierarchical shrinkage"具体怎么做、
+能不能不引入MCMC/Stan这类新依赖就在现有 `dixon_coles.py` 的scipy MLE框架里实现。
+
+读了现有代码确认这个缺口目前是空白,不是"已经有但不够好":`dixon_coles.py` 第125-140行
+`neg_log_lik()` 里,唯一的正则化是第139行 `ll -= 1000 * (a.sum()) ** 2`——这是一个
+"强制mean(a)=0"的**可辨识性约束**(identifiability constraint),不是收缩先验,作用完全不同:
+它只保证参数有唯一解,不会把数据少的球队的估计往联赛均值拉。真正控制过拟合的只有第144行
+`bounds=[(-3, 3)] * n + ...` 这个粗糙的箱型约束——对样本极少的新晋级队/青年队,这个约束
+只是防止优化器跑到无穷大,不会像收缩先验那样根据"这支球队到底踢了几场"动态调整收缩力度。
+
+### 查到的东西
+
+**1. Baio & Blangiardo (2010),《Bayesian hierarchical model for the prediction of football
+results》(Journal of Applied Statistics, 37(2), 253-264)——这个方向的原始文献。** 核心
+做法:给每支球队的进攻强度att、防守强度def加层级先验,不是独立估计,而是共同来自一个
+"全联赛(或如原文按confederation/大洲分组)均值+方差"的正态分布,方差本身也是待估的
+超参数——数据少的球队(观测到的进球/失球样本量小)对应的似然曲面更平,先验的拉力相对更强,
+估计值被拉向联赛均值更多;数据多的球队似然曲面更尖,先验拉力相对更弱,估计值更接近它自己
+的真实观测——**这种"力度随数据量自动调节"的性质是收缩先验相对于现有代码"一刀切箱型约束"
+最大的实际差异,本项目K联赛125场/12队、英超307场/20+队这种小样本场景正好是它设计要解决
+的场景。** 原文用OpenBUGS做MCMC,在1991-92赛季意甲数据上验证。
+**已知问题(后续文献指出,不是本项目发现)**:这种"一刀切"的层级收缩容易"过度收缩"
+(overshrinkage)——联赛里真正远强/远弱的极端球队(常年争冠或常年保级的队伍)会被不必要地
+拉向联赛均值,削弱了模型本该保留的、真实存在的实力差距。文献给出的修正方向是更复杂的分层
+结构(比如按"强/中/弱"分组的三组Dirichlet/Categorical混合先验,组内用Student-t而非正态,
+对已知的、真正远离均值的球队收缩力度更小)。本项目如果只做最基础的单层收缩,需要留意这个
+已知的副作用,而不是假设收缩先验只有好处没有代价。
+
+**2. 一个更实用的近似:MAP估计下,高斯先验等价于L2/岭回归惩罚项,不需要上MCMC/Stan/PyMC
+就能在现有scipy框架里实现。** 这是统计学里的标准等价关系(贝叶斯MAP估计+独立正态先验
+N(0,τ²),数学上等价于在负对数似然上加一个 `λ·Σθᵢ²` 的L2惩罚项,`λ=1/(2τ²)`),不是
+需要单独引用论文的新发现,但直接查到多个来源把这个等价关系明确应用到"用L2正则化处理
+Dixon-Coles小样本/新晋级球队过拟合"这个具体场景上,方向和本项目需要的完全一致。**这意味着
+现有 `fit_dixon_coles()` 不需要换成PyMC/Stan重新实现一遍(那是"续3"里已经评估过的高成本
+选项),只需要在第138-140行现有的 `neg_log_lik()` 里,在已有的sum(a)=0可辨识性惩罚之外
+再加一项**:
+```python
+tau2 = ...  # 先验方差,越小收缩力度越强
+ll -= (np.sum(a ** 2) + np.sum(b ** 2)) / (2 * tau2)
+```
+这一项本身就是"对α/β加了一个独立同分布的N(0,τ²)先验",效果上会让样本少的球队(似然对它的
+`a_i`/`b_i`不敏感、曲面平)被这项惩罚主导、拉向0(联赛平均攻防强度);样本多的球队(似然
+曲面尖锐)则相对不受影响——**不需要按"这支球队踢了几场"手动分档去调收缩力度,单一的τ²通过
+似然本身的曲率就能自动实现"数据越少收缩越强"这个Baio & Blangiardo原文想要的效果**,这是
+把全套贝叶斯层级模型简化成一次MAP点估计后仍然保留的核心性质。
+
+**3. τ²(先验方差/收缩力度)怎么定,两条路,都不需要凭空拍数字:**
+   - **交叉验证/留出集选择**(和"续3"里已经承认"ξ需要用样本外似然专门优化、这次没做"是
+     同一类做法):像调ξ一样,把τ²也当成一个需要在留出的样本外数据上最大化预测似然/最小化
+     Brier score来选的超参数,而不是从文献抄一个数字——本项目联赛规模(K联赛12队、日职联
+     18队、英超20队)和意甲原文、五大联赛也未必一样,直接抄文献里的方差值犯的错误和之前
+     "直接套用ρ≈-0.13英超估计值"是同一种错误,不能重复。
+   - **经验贝叶斯(empirical Bayes)两步法,更省成本**:先按现有代码无收缩地跑一遍MLE,
+     拿到一组"未收缩"的`a_i`估计值,用这组值的样本方差反推τ²(这就是James-Stein/
+     Efron-Morris型收缩估计量的标准做法——用组间方差估计"总体应该有多分散",再拿这个
+     方差当先验方差去收缩每个个体估计),再用这个τ²重新跑一次带惩罚项的MLE,必要时迭代
+     2-3轮到τ²收敛。这一步在现有`fit_dixon_coles()`基础上是纯粹的代码新增,不需要新依赖、
+     不需要重新采集任何数据,是三条已知缺口里成本最低、能立刻验证的一条。
+
+### 与两个已知未解决缺口的交叉关系(不是新增问题,是同一批問題互相关联)
+
+- **和缺口#3(K联赛冠军组/保级组分组)是独立问题,收缩先验解决不了。** 收缩先验处理的是
+  "样本量太少导致估计不稳定",K联赛分组导致γ算出负值(-0.089)是"赛程结构本身违反了
+  '同一个联赛所有球队互相踢过、可比较'这个建模假设",两者要分开修,不要指望加了收缩先验
+  这个问题会顺带消失。
+- **和"续3"里提到的欧冠瑞士轮不适合直接套Dixon-Coles的问题同理**:收缩先验能缓解"球队
+  参数估计方差大",不能修复"这批球队根本不在同一个可比较的竞赛环境里"这种结构性错配,
+  两类问题不能用同一个工具解决,以后如果扩展到欧冠/杯赛类赛程,要先确认是哪一类问题。
+
+### 接入建议(供以后决定是否做,不代下结论)
+
+1. **低成本、可以先做**:在独立测试脚本里(不要改`dixon_coles.py`主逻辑)复制一份
+   `fit_dixon_coles()`,加上文中的L2惩罚项和经验贝叶斯两步法估计τ²,用"续3"里已经验证过
+   的K联赛/日职联/英超三个联赛+相同的日期切分方式重新跑一遍样本外命中率和Brier score,
+   直接和"续3"记录的基线数字(K联赛50.0%/日职联57.8%/英超51.6%,Brier普遍在0.25附近或
+   更差)对比,这是复用已有数据管线、不需要新抓数据的验证。
+2. **重点检查过度收缩(overshrinkage)有没有发生**:验证时除了看整体命中率,应该单独看
+   "样本量差异很大的球队"(比如K联赛里踢了30+场的强队 vs 赛季中因保级组划分只踢了几场
+   交叉赛的弱队)收缩前后攻防强度差距是否被不合理地压缩——如果加了收缩后模型反而分不清
+   强弱队(比如原来攻击strength差距很大的两队,收缩后变得接近),要考虑τ²定小了或者需要
+   Baio & Blangiardo后续文献提到的分组先验,而不是简单调大τ²了事。
+3. **只有第1步显示样本外命中率/Brier score确实优于"续3"里记录的无收缩基线,才考虑往前推进**
+   ——参照本项目一贯的纪律(比如Shin去水法测完没有提升就明确不采用),不能因为"理论上应该
+   更好"就假设它真的更好,必须用相同的样本外协议重新测一遍再下结论。
+
+### 信息来源
+
+- Baio, G. & Blangiardo, M. (2010). "Bayesian hierarchical model for the prediction of
+  football results". *Journal of Applied Statistics*, 37(2), 253-264. 模型结构(att/def
+  层级正态先验、共同均值方差超参数、向confederation/联赛均值收缩)与"overshrinkage"问题
+  经搜索引擎摘要交叉印证:[IDEAS/RePEc摘要页](https://ideas.repec.org/a/taf/japsta/v37y2010i2p253-264.html),
+  [UCL Discovery](https://discovery.ucl.ac.uk/16040/),
+  [Gianluca Baio个人页面](https://gianluca.statistica.it/research/football/),
+  [ResearchGate](https://www.researchgate.net/publication/46527004_Bayesian_hierarchical_model_for_the_prediction_of_football_results)
+  ——**本次会话里 researchgate.net、arxiv.org(含/abs、/html、/pdf全部形式)、
+  gianluca.statistica.it、statmodeling.stat.columbia.edu、mdpi.com、
+  pmc.ncbi.nlm.nih.gov、sciencedirect.com、frontiersin.org、docs.pena.lt、
+  cran.r-project.org、en.wikipedia.org 等几乎所有学术/博客域名均被当前环境代理在
+  连接层直接拒绝(`CONNECT tunnel failed, response 403`),比"2026-09-11"那几节记录的
+  拦截范围明显更广(那时至少还能用arxiv.org/html拿到全文)——这次没有一篇文献是直接
+  WebFetch读到原文的,全部结论都只能靠WebSearch返回的搜索引擎摘要交叉印证多个来源得到,
+  可信度低于本笔记前面标注过"已读全文"的那几节(ELO-Odds论文、WNBA论文等),具体的
+  超参数取值(先验方差的具体数字、是否真的按confederation分组)以后有条件访问原文时
+  必须重新核实,现在只能确认"层级收缩先验向均值收缩、数据越少收缩越强"这个机制性结论,
+  不能确认任何具体数值。**
+- 过度收缩(overshrinkage)问题与更复杂的三组混合先验修正方案:综合自对
+  farmand-bt/bayesian-football-prediction(GitHub复现代码库,README部分,同样通过
+  WebFetch读到实际页面内容,不是被拦截域名)的直接访问,以及上述WebSearch摘要交叉印证。
+- 高斯先验MAP估计与L2/岭回归惩罚项的等价关系(标准统计学结论,用于说明不需要引入MCMC/
+  Stan/PyMC即可在现有scipy框架实现近似收缩):[penaltyblog Dixon-Coles文档](https://docs.pena.lt/y/models/dixon_coles.html)(被拦截,未直接读取)、
+  搜索引擎摘要交叉印证的通用L2正则化/岭回归说明。
+- James-Stein/经验贝叶斯两步收缩估计法(用未收缩估计值的组间方差反推先验方差τ²)的标准
+  做法:[Efron, CASI第7章 James-Stein Estimation and Ridge Regression](https://efron.ckirby.su.domains/other/CASI_Chap7_Nov2014.pdf),
+  [Austin Rochford: Stein's Paradox and Empirical Bayes](https://austinrochford.com/posts/2013-11-30-steins-paradox-and-empirical-bayes.html)
+  (均经WebSearch摘要交叉印证,未直接WebFetch原文核实)
+- 更前沿的动态收缩方向(仅作为以后可能的延伸方向记录,复杂度明显更高,本次未深入):
+  一篇2026年的新论文提到用"commensurate priors + spike-and-slab超参数"让球队攻防强度
+  随时间(赛季/转会窗口)动态借用历史信息,在德甲/英超/西甲最近5个赛季数据上验证——
+  论文本身(arXiv 2508.05891)被拦截无法读取,标题与摘要经WebSearch交叉印证,不确定
+  具体实现细节,列在这里只是为了以后如果收缩先验这条路验证有效、想进一步做"动态强度"时
+  有一个已知的延伸方向可以查,现在不需要现在就深入。
+
+---
+
+## 2026-09-14 各联赛/赛事类型的场均进球基准数据:填补一个代码里确实存在、笔记之前没查过的空白
+
+### 为什么研究这个,以及和已有代码的对应关系
+
+任务清单里列的几个方向(Dixon-Coles细节、公众下注偏好、xG方法论、去水法、样本量、sharp money)
+笔记里都已经至少查过一轮,唯独"各联赛/赛事类型的场均进球基准数据"这一条,翻遍全文一次都没有
+出现过。先去读代码确认这不是"文献查过但没写进笔记",而是代码里真实存在、此前没被注意到的空白:
+
+- `load_workbook_data()` 里每场比赛都保留了 `league` 字段(v8_backtest_pipeline.py 第73行
+  `matches[mid] = dict(league=league, home=home, away=away, ...)`),但用 `grep league`
+  搜整个文件,**这个字段只在这一行被赋值,后面计算 `compute_odds_drift_signal()` 和
+  `compute_expected_goals()` 两个核心信号时完全没有被读取或使用过**——联赛身份信息进了
+  数据结构,但从未参与任何计算。
+- `compute_expected_goals()` 里的 `pick_rate()`(第237-247行)按"主场/客场≥2场 → 近6场
+  ≥2场 → 总体Total≥2场"三级兜底取球队自己的历史进失球率,**如果三级都不满足(min_n=2都
+  凑不够),直接返回 `(None, 0)`**,只要四个分量(主队主场进球率/客队客场失球率/客队客场
+  进球率/主队主场失球率)有一个是None,整个 `compute_expected_goals()` 就返回None
+  (第255-256行)——**没有任何"联赛级别默认值"作为最后一道兜底**,这批比赛的goal_signal
+  会直接整场缺失,回退成"仅盘口信号"。笔记里"薄市场/冷门联赛"(9-11续)、"5场实盘预测几乎
+  全被UEFA青年联赛U19占了"(9-10续)两节已经记录过这类比赛球队历史数据稀疏,但没有从
+  "能不能用外部联赛基准数据当最后一道兜底"这个角度查过,这正是可以查、且和现有代码结构
+  直接对应的空白。
+
+### 查到的东西
+
+**Part A:主流联赛的场均总进球基准,量级差异比直觉大**
+
+综合多个来源(见"信息来源",主要通过WebSearch摘要交叉印证,thedatabetics.com被当前环境
+代理拦截无法直接WebFetch,footystats.org同样未能逐页直接核实,数字应视为"方向和量级可信、
+精确小数点以后位数不必较真"):
+
+- 全球场均约2.97球,欧洲五大联赛平均约3.01球区间;德甲长期是五大联赛里最高(约3.19球/场),
+  英超2025-26赛季380场1045球,**2.75球/场**;南美联赛整体偏低,阿根廷联赛一项研究里低至
+  **2.11球/场**——同样是"顶级职业联赛",场均总进球可以相差40%以上,不是小差异。
+- **本项目实际覆盖的联赛,直接查到的数字**:K联赛1(K League 1)2025赛季228场578球=
+  **2.54球/场**,2026赛季(截至查询时)155场378球=2.44球/场;日职联(J1联赛)2026-27赛季
+  开局50场154球=**3.08球/场**(样本尚小,是赛季初,仅供参考量级);卡塔尔联赛(Qatar Stars
+  League)近十个赛季在2.8~3.65球/场之间波动,**同一个联赛不同赛季本身就有明显波动**
+  (2020-21低至2.85,2023-24高达3.65);乌兹别克超级联赛(Uzbekistan Super League)
+  2021-2025五个赛季稳定在**2.18~2.54球/场**,是查到的几个联赛里最低、也最稳定的一个。
+- 这组数字直接说明:本项目数据集里混杂的几个联赛,场均总进球基准本身横跨约2.2~3.6球/场,
+  跨度接近1.4球——如果笔记以后要做"这场比赛判大/判小"之外的**校准检验或诊断分析**
+  (比如confidence_prob的ECE分箱,9-11续5那节已经做过一次),按联赛分组看会比不分组更有
+  信息量,因为不同联赛的"大/小"基础概率天然不同,混在一起算整体命中率/Brier score会互相
+  稀释。
+
+**Part B:青年队/发展联赛的场均进球,比一线联赛高出一截,量级足够解释此前的观察**
+
+英足总的U18职业发展联赛(Professional U18 Development League)公开数据:2018-19赛季
+265场1063球=**4.01球/场**,2015-16赛季348场约1263球=**3.63球/场**,2025-26赛季392场
+约1619球=**4.13球/场**——三个不同赛季都稳定在**4球/场以上**,比英超一线队(2.75球/场)
+高出约45%-50%。同期查到的U21职业发展联赛(2014-15赛季264场782球=**2.96球/场**)反而
+和一线队更接近,量级上明显低于U18——**U18和U21两级青年联赛之间本身场均进球差距就很大,
+不能把"青年队"当成一个笼统的类别**,U18这个更年轻的年龄段防守组织性更弱、场均进球明显
+更夸张。
+
+这个发现和笔记里已经记录过的两处观察直接对得上,提供了一个此前没有的量化解释:
+
+1. **"2026-09-10(续)"记录的79场固定规则回测里,"无脑选大球"基线ROI(25.0%)明显跑赢
+   固定规则本身(13.5%)**——如果这79场里青年队/发展联赛比赛占比不低(笔记没有单独统计过
+   这个比例,这里指出的是"如果占比不低,这个结果完全符合基准",不是断言一定是这个原因),
+   固定规则用的是历史盘口漂移/中位数隐含概率这类**跨联赛统一处理**的逻辑,没有对U18这类
+   场均4球以上的赛事做特殊对待,而一线队常见的2.5/2.75球盘口线放到场均4球的联赛上,"大"
+   方向天然更容易通过,这和无脑选大表现更好是同一个方向。
+2. **"2026-09-11(续)"记录的实盘5场预测"几乎全被UEFA青年联赛U19占了"**——这条本身没有
+   进一步问"U19联赛的进球环境和一线队有什么系统性不同",这次查到的U18发展联赛4球/场基准
+   补上了这一步。
+
+**必须诚实说明的局限,不能过度引申**:上面U18/U21数字来自英足总发展联赛(英格兰青训体系),
+和本项目实际覆盖的国际青年队赛事(如笔记提到的费内巴切U19、罗马U19、科莫U19、莱比锡红牛
+U19,这些通常是俱乐部青年队参加的欧洲区域邀请赛/友谊赛性质赛事)**不是同一类赛事**——
+英格兰国内发展联赛是常规联赛制、赛程稳定,而俱乐部间的国际青年邀请赛/友谊赛性质更强、
+对手强弱差距可能更极端、"是否全力以赴"的临场态度更不确定(这和笔记"2026-09-11"那节
+"强弱悬殊联赛容易让模型过度自信"提到的"放水/轮换"问题是同一类不确定性,青年队邀请赛
+只会更严重,不会更轻)。**"青年队比赛场均进球明显高于一线队"这个方向性结论,证据链是扎实的
+(三个不同赛季的英足总官方发展联赛数据、量级一致);但"到底高多少"这个具体数字,不能直接
+把英格兰发展联赛的4.0-4.1球/场,不经调整地套到本项目实际遇到的国际青年邀请赛上。**
+
+**Part C:一个必须正视的反对论点——这条信息很可能已经被市场定价,不构成新edge**
+
+搜索"bookmakers如何按联赛设定大小球线"查到的通用说明证实:博彩公司本来就会**按联赛场均
+进球水平设定不同的默认盘口线**(德甲/荷甲这类高进球联赛开盘线本来就比阿根廷联赛这类低进球
+联赛高),这正是笔记"2026-09-11续2"那条元结论(ELO-Odds/EMH两篇文献)已经反复强调过的
+情况的又一次印证:**联赛场均进球这个信息,对市场来说不是秘密,盘口开盘线本身就已经把它
+定价进去了。** 所以这份基准数据**不能被当成一个可以直接拿去跟盘口对赌的新信号**(比如
+"这个联赛均分高就无脑判大"),那样做等于重新落入"结果已经被市场吸收"的陷阱。
+
+真正的价值在下面"接入建议"里区分开的两类用途——**都不是"预测信号",而是兜底填补数据缺口
+和诊断分析**,这两类用途不受"市场已经定价"这条反对意见的约束(市场定价的是"这场比赛该开
+多少的线",不影响"我们自己的球队历史数据不够时该用什么默认值去估算期望进球"这个纯粹的
+工程问题)。
+
+### 与本仓库数据的对应关系、接入建议(供以后决定是否做,不代下结论)
+
+1. **低成本、可以先做,填补`compute_expected_goals()`真实存在的空白**:在
+   `pick_rate()`三级兜底(主场/客场→近6场→Total)之后,加第四级兜底——按 `league` 字段
+   查一张"联赛/赛事类型→场均总进球"的静态表(先只覆盖本项目历史数据里出现频率最高的
+   十几个联赛,不用一次性做全)。这一步纯粹是"球队自己历史数据三级都不够时,不要直接放弃
+   返回None,退化到用联赛级别的外部基准",是给现有函数补一个已经存在但从未使用的
+   `league` 字段的用途,不改变已有三级逻辑,风险很小。**注意这张表本身需要专门再花时间
+   整理**(上面Part A/B查到的数字只是几个联赛的抽样示例,不是覆盖本项目实际出现的全部
+   联赛/赛事的完整表,而且像卡塔尔联赛这种"同一联赛不同赛季能差别到2.8~3.65球"的情况,
+   直接抄一个赛季的数字当"基准"本身就有风险,需要取多赛季平均或者干脆做成一个区间)。
+2. **低成本、纯诊断用途,和预测逻辑无关**:以后做confidence_prob校准检验(9-11续5)或者
+   任何整体命中率/Brier score统计时,**按联赛场均进球基准分组**(比如"高进球联赛/中等/
+   低进球联赛"三档,或者直接按Part B的发现单独把"青年队/发展联赛类"赛事分出来单看),
+   而不是像现在这样把所有联赛混在一起算一个整体数字——这能帮助回答"79场回测里无脑选大
+   跑赢固定规则,是不是因为样本里青年队比赛占比偏高"这类此前只能猜测、现在有量化基准可以
+   实际统计的问题,只需要用现有历史predictions.json按league字段分组重跑一遍统计,不需要
+   新抓数据。
+3. **明确不建议做的事**:不要把"联赛场均进球高/低"直接当成大小球方向的预测信号去加进
+   `compute_odds_drift_signal()` 的composite——上面Part C已经说明这条信息大概率已经被
+   开盘线本身定价,重新加回去大概率重复"2026-09-11续2"元结论描述的"切分同一份市场信息、
+   测不出新增量"的模式,除非专门做样本外回测验证过有独立于开盘线的增量(而现有代码里
+   `open_line`/`live_line`本身已经是市场消化了联赛进球环境之后给出的结果,直接对照更合理)。
+
+### 信息来源
+
+- 全球/五大联赛场均进球水平综合统计(德甲3.19、荷甲3.12、英超2025-26赛季2.75、南美联赛
+  低至2.11等横向对比数字):[TheDatabetics: Where The Goals Really Are](https://thedatabetics.com/insights/where-the-goals-really-are-highest-scoring-football-leagues/)
+  (域名被当前环境代理拦截,WebFetch直接读取失败,以上数字经WebSearch返回的摘要获得,
+  未核实原文完整表格与样本细节)
+- K联赛1场均总进球(2025赛季2.54、2026赛季2.44):[FootyStats K League 1 AVG Total Goals](https://footystats.org/south-korea/k-league-1/average-total-goals-table)
+  (经WebSearch摘要获得,未逐页直接WebFetch核实)
+- 日职联J1联赛场均总进球(2026-27赛季开局3.08):[Wikipedia 2026–27 J1 League](https://en.wikipedia.org/wiki/2026%E2%80%9327_J1_League),
+  [FootyStats J1 League AVG Total Goals](https://footystats.org/japan/j1-league/average-total-goals-table)
+  (Wikipedia赛季条目通常可信,但本次经WebSearch摘要获得,未逐条核实具体轮次)
+- 卡塔尔联赛(Qatar Stars League)近十个赛季场均总进球(2.8~3.65区间):[Wikipedia各赛季
+  Qatar Stars League条目](https://en.wikipedia.org/wiki/2023%E2%80%9324_Qatar_Stars_League)
+  及同系列各年份条目,经WebSearch摘要交叉印证多个赛季数字
+- 乌兹别克超级联赛场均总进球(2021-2025五个赛季2.18~2.54):[FootyStats Uzbekistan Super
+  League AVG Total Goals](https://footystats.org/uzbekistan/uzbekistan-super-league/average-total-goals-table),
+  [Wikipedia各年份Uzbekistan Super League条目](https://en.wikipedia.org/wiki/2025_Uzbekistan_Super_League)
+- 英足总U18/U21职业发展联赛场均总进球(U18三个赛季均4球/场以上,U21同期2.96球/场):
+  [Wikipedia 2018–19 Professional U18 Development League](https://en.wikipedia.org/wiki/2018%E2%80%9319_Professional_U18_Development_League),
+  [2015–16赛季条目](https://en.wikipedia.org/wiki/2015%E2%80%9316_Professional_U18_Development_League),
+  [2025–26赛季条目](https://en.wikipedia.org/wiki/2025%E2%80%9326_Professional_U18_Development_League),
+  [2014–15 Professional U21 Development League](https://en.wikipedia.org/wiki/2014%E2%80%9315_Professional_U21_Development_League)
+  (均经WebSearch摘要获得,Wikipedia赛季条目本身通常有官方数据源支撑,但本次未逐条目
+  直接WebFetch核实具体进球总数的加总是否有误)
+- 博彩公司按联赛场均进球水平设定不同默认盘口线的通用行业说明(用于Part C"市场已定价"
+  论点):经WebSearch多个博彩教学类网站摘要交叉印证(内容通用性强,非学术文献,可信度
+  中等,仅作为方向性佐证,不引用具体数字)
+
+**方法论诚实说明**:这次除Wikipedia赛季条目外,thedatabetics.com和footystats.org两个
+主要数据源都未能直接WebFetch核实原始页面/完整表格,全部数字经WebSearch摘要获得——和
+"2026-09-11""2026-09-13"两次笔记记录的代理拦截情况相同,可信度应视为"量级和方向可信、
+精确到小数点后两位的具体数字以后有条件时应重新核实",尤其是接入建议第1条要做的那张
+"联赛→基准值"表,正式使用前应该找机会用官方联赛数据源(而不是这次这种WebSearch摘要)
+重新核实一遍每个联赛的数字,特别是像卡塔尔联赛这种跨赛季波动大的联赛,不能只取一个赛季
+的数字当成稳定基准。
+
+---
+
+## 2026-09-15 "更早于盘口的信息"这条路到底能不能走:阵容/伤停新闻的市场反应速度证据 + 本仓库当前数据结构下的可行性核查
+
+### 为什么研究这个
+
+"2026-09-11(续2)"那条元结论明确说,重新组合现有盘口信号(线体/水位/欧赔/去水法/leader-
+follower)大概率已经碰到理论天花板,**真正可能带来增量信息的只剩两条路:(a) 真正独立的
+数据源(完整联赛赛程,喂给真Dixon-Coles);(b) 更早于盘口反应的信息(伤停、阵容)**。
+路(a)后续在"9-11续3"到"9-13"三节里被认真做了(真实现Dixon-Coles、测三个联赛、查收缩
+先验),路(b)从提出那天起再没有人碰过——笔记里搜了一遍,"阵容""伤停""lineup""injury"
+这几个词除了这条元结论本身提了一句,没有任何一节展开研究过。这次定向补上这条路:市场到底
+多快消化阵容/伤停这类信息、有没有可测量的"抢跑窗口",以及本项目现有的数据管线(只有开盘/
+临场两个快照点)能不能支持验证这个假设。
+
+### 查到的东西
+
+**Part A:阵容确认的官方时点是有明确规则的,不是模糊的"赛前不久"**
+
+英超2024-25赛季起把"必须提交首发名单"的时点从赛前60分钟改成了赛前75分钟,原话是英超
+Handbook规则L.23:每家俱乐部代表必须在"距离比赛开球时间不少于75分钟"提交包含首发+替补
+球衣号码姓名的名单,这次改动是为了向UEFA的规则看齐——**说明"赛前60-75分钟"这个阵容确认
+窗口不是行业传闻,是有具体规则条文可查的官方时点(英超/欧战),多个独立信源(英超官网自己
+的新闻稿、Yahoo News、GiveMeSport)一致**。中小联赛/青年队赛事的官方提交时点未必一样
+(未查到K联赛/日职联/卡塔尔联赛/乌兹别克联赛各自的具体规则),但**主流联赛普遍在赛前1-1.5
+小时公布首发**这个量级本身有据可查,可以作为默认假设。
+
+**Part B:盘口对新信息的反应速度——已有严肃学术证据,但测的是比赛中的进球,不是赛前阵容**
+
+Croxson & Reade (2014), "Information and Efficiency: Goal Arrival in Soccer Betting"
+(*The Economic Journal*, 124(575), 62-91)是这个方向最直接相关的同行评审文献:利用
+"进球恰好发生在半场哨声前后几分钟"这个自然实验(160个这样的进球样本),把"比赛中持续
+流动的琐碎信息"和"一次性的重大信息(进球)"分开,测市场价格对重大信息的反应速度。核心结论:
+进球后市场隐含胜率几乎立即跳动约22个百分点,价格调整"迅速且完整"(半强式有效)。**这篇
+测的是比赛已经开始后、进球这种终局性最强的信息,不是赛前阵容这种概率性、可能被误判的信息,
+不能直接当成"阵容新闻反应速度"的证据,但提供了一个重要的方向性校准:对英超这种高流动性、
+高关注度联赛,职业玩家和算法定价系统消化一次性重大信息的速度是以分钟甚至秒计的。** 这次
+没能找到同等质量的、专门测"阵容公布瞬间盘口反应速度"的同行评审论文——搜到的相关内容
+(mybookie.ag、winfulltime.com、betsuite.ai等)全部是博彩教学类营销博客,反复出现"最大波动
+发生在赛前60-90分钟阵容公布时""某些消息灵通的资金会抢在官方公布前调整"这类说法,但**没有
+一篇给出可核实的原始数据来源或样本量,可信度和笔记"9-11续"那节已经点名批评过的BettorEdge
+博客是同一档次,只能当方向性线索,不能当证据引用**。
+
+**Part C:关键球员缺阵对进球的量化影响——有严肃证据,但量级证据不够直接**
+
+- **Reade et al.(NCBI/PMC 12872852,"Missing pieces, new patterns: the impact of
+  association football international call-ups on team offensive and defensive
+  performance indicators")**:用球员因国家队征召缺席俱乐部比赛这个"外生的、非战术性的
+  缺阵"作为自然实验,测量球队进攻/防守指标的变化。方向性结论:缺员比赛期间球队反而呈现
+  "更偏控球、进攻输出增强"的模式,效应量作者自己形容为"modest"(温和),且没有证据表明
+  防守指标同时变差——**这个结果和直觉相反(不是"少一个主力就该踢得更差"),说明"关键球员
+  缺阵"对球队表现的影响不是线性的、也不一定是负面的,可能因为球队会做战术补偿**,不能假设
+  "少了谁就该按比例扣期望进球"这种朴素调整一定成立。这篇论文全文被当前环境代理拦截,
+  以上结论只经WebSearch摘要交叉印证,具体效应量数字(缺阵球队的进攻输出到底提升了多少)
+  没有拿到,需要以后有条件时重新核实。
+- **进攻球员缺阵 vs 防守球员缺阵的方向性差异**(仅见于mybookie.ag等营销类来源,可信度低,
+  列出仅供参考不作为证据):进攻球员缺阵通常对应"预期总进球下调",防守球员(尤其首发门将)
+  缺阵对应"预期总进球上调"——这个方向本身符合常识,但没有找到可核实的学术量化数字支撑
+  "具体下调/上调多少"。
+- **真正能把"某球员的进球贡献"量化到可以喂进Dixon-Coles式模型的方法(Player Impact
+  Metric,ScienceDirect,2025年5月发表)存在,但数据门槛和笔记"9-12"那节已经排除掉的
+  完整xG模型是同一个量级**——PIM需要逐次进攻的事件序列数据(球权转移、Expected Threat
+  空间网格),这类数据只有Opta/StatsBomb等商业数据商为顶级联赛提供,和"9-12"那节的结论
+  ("完整xG模型对本项目不现实")完全一样,本项目覆盖的中小联赛/青年队赛事基本拿不到。
+  **如果真要做,更现实的简化代理是最粗糙的"该球员本赛季进球数/球队本赛季总进球数"这种
+  份额估算(不需要事件级数据,只需要球员/球队进球统计),但这次没有查到任何文献验证过这种
+  粗糙份额法本身的预测力,是本项目如果想做只能自己先验证的一步,不是抄现成结论。**
+
+### 与本仓库现有数据结构的对应关系:这次的可行性结论比之前几次更含糊,必须如实说明
+
+这是这条路径至今没人碰的部分原因——真去查了才发现,现有代码对这条路径的两个前提都没有
+答案,而且这次没能拿到工具去补上:
+
+1. **不确定现有"开盘/临场"两个快照点,"临场"快照到底是在阵容公布之前还是之后抓的。**
+   `v8_backtest_pipeline.py` 的 `load_workbook_data()` 解析"多庄亚洲盘"sheet时,
+   实际按位置解出了 `last_time`(临场那口价的记录时间)和 `snap_time`(整行快照时间)
+   两个字段(第87-89行),但**全仓库搜索这两个字段名,只有这一处解包,后面完全没有被
+   读取或使用过,也没有任何文档说明这两个时间戳记录的是绝对时钟时间还是"距开球还有多久"**。
+   这件事很关键:如果"临场"快照本来就是赛前60-90分钟内(甚至更晚)抓的,那么现有
+   `line_sig`/`water_sig` 很可能已经隐含包含了阵容新闻引发的盘口调整,只是没人拆开看过
+   "临场那口价,是在阵容公布前还是公布后记录的"——这种情况下,阵容信息不是一条全新的
+   独立信号,而是已经被现有信号部分吸收的东西,重新加一遍会重复"9-11续2"元结论描述的
+   "对同一份信息做二次切分"陷阱。**这次没有可用的工具去实际打开一份原始Excel核对这两个
+   时间戳字段的真实取值,是本节最大的一个悬而未决的问题,留给以后接手时第一步就查这个,
+   比查任何外部文献都优先——这是纯本地数据核实,不需要联网。**
+2. **不确定nowgoal对本项目实际覆盖的联赛(K联赛、日职联、青年队赛事、卡塔尔联赛、乌兹别克
+   联赛)是否提供可核实时间戳的"确认阵容"页面。** 搜索引擎结果显示nowgoal平台整体上"提供
+   阵容/lineup信息"是有的(常见于该网站的通用功能介绍),但和笔记"9-12"那节记录射门/角球
+   数据可用性时同样的教训——**这是对整个网站的泛泛描述,不是针对本项目实际覆盖联赛逐一
+   核实过的,青年队/小联赛赛事很可能和缺进球历史、缺射门统计一样,也缺阵容页面或者阵容
+   页面更新滞后**,不能假设覆盖率和五大联赛一样。
+3. **即使前两点都验证为"数据可得",阵容新闻本身的时效性要求比之前任何一个已测方向都高。**
+   现有回测框架(v8_backtest_pipeline.py)处理的是"赛前批量下载好的Excel快照",阵容驱动
+   的策略如果真的存在可利用窗口,文献和行业内容都指向这个窗口以分钟计(尤其Part B的
+   Croxson & Reade证据说明大市场对一次性信息反应可以快到秒级)——**这意味着即使数据可得,
+   要真正验证/利用这个信号,需要的是"阵容公布后尽快抓取、和公布前的报价对比"这种近实时
+   抓取节奏,而不是现有"开盘+临场两个快照"这种事后批量下载模式,是比之前任何一次(包括
+   Dixon-Coles需要整赛季数据、GAP评级需要射门数据)更大的采集架构改动。**
+
+### 接入建议(供以后决定是否做,不代下结论,这次第一步比以往任何一节都更"零成本")
+
+1. **零成本、应该第一步做、不需要联网**:找一份现有的原始Nowgoal Excel(不是新抓,用已有
+   历史文件即可),人工核对"多庄亚洲盘"sheet里 `last_time`/`snap_time` 两列的真实取值
+   格式和含义——是绝对时间戳还是相对时间,典型取值距对应比赛开球时间大概提前多久。这一步
+   直接回答"现有临场快照是否已经覆盖了阵容公布窗口"这个前提问题,做不做后面的都取决于这个
+   答案,而且不需要WebSearch/WebFetch,纯本地文件核对,是这次唯一一个可以立刻做、且不受
+   本次会话工具限制的动作。
+2. **低成本、需要联网确认数据可得性**:挑1-2个本数据集里覆盖场次多、非青年队的联赛(参考
+   "9-11续3"已经验证过JSON接口可用的K联赛/日职联),实际打开nowgoal对应联赛几场具体比赛的
+   页面,确认是否有带时间戳的"确认阵容"信息可以抓取,如果连这一步都拿不到,后面不用往下做
+   (和"9-12"那节对射门数据的处理方式一致)。
+3. **高成本、需要新的采集架构、且时效性要求高**:只有前两步都确认可行,才值得考虑做一个
+   独立于现有批量Excel下载模式的近实时抓取(在阵容公布窗口前后各抓一次快照+同时抓确认
+   阵容文本),先做**市场效率检验**(阵容意外程度 vs 两次快照之间的额外盘口移动幅度,
+   这是检验"市场有没有滞后",不是直接的预测信号)而不是直接当成新信号接入
+   `v8_backtest_pipeline.py`——参照"9-11续2"元结论,如果检验结果显示市场对阵容新闻反应
+   已经足够快(类似Croxson & Reade在英超进球上测到的近乎瞬时调整),这条路大概率和其他
+   已测方向一样,测不出可利用的窗口,需要先有纪律地做这个检验,不能直接假设"阵容信息=
+   新的edge"。
+
+### 信息来源
+
+- 英超2024-25赛季起阵容提交时点改为赛前75分钟(原60分钟)、Handbook规则L.23:
+  [Premier League官网新闻稿](https://www.premierleague.com/en/news/4081650),
+  [Yahoo News Singapore](https://sg.news.yahoo.com/premier-league-rule-change-allows-161439114.html),
+  [GiveMeSport](https://www.givemesport.com/why-premier-league-team-lineups-are-announced-75-minutes-before-kick-off/)
+- Croxson, K. & Reade, J. J. (2014). "Information and Efficiency: Goal Arrival in Soccer
+  Betting." *The Economic Journal*, 124(575), 62-91. 方法(半场哨声前后进球作为自然
+  实验分离重大信息反应)与核心数字(160个样本、进球后隐含胜率跳动约22个百分点、"迅速且
+  完整"的半强式效率)经多个独立信源交叉印证:[Wiley摘要](https://onlinelibrary.wiley.com/doi/abs/10.1111/ecoj.12033),
+  [Oxford Academic摘要](https://academic.oup.com/ej/article-abstract/124/575/62/5076978),
+  [IDEAS/RePEc](https://ideas.repec.org/a/wly/econjl/v124y2014i575p62-91.html),
+  [University of Birmingham研究页](https://research.birmingham.ac.uk/portal/en/publications/information-and-efficiency-goal-arrival-in-soccer-betting(15b7eb0d-3dcb-434e-b475-3237047b5adf).html)
+  ——**本次wiley/academic.oup.com/researchgate等域名均被当前环境代理拦截,未能直接
+  WebFetch读取全文,以上结论均经WebSearch摘要交叉印证多个独立来源得到,不是直接读到论文
+  正文,以后有条件应重新核实具体样本细节和效应量的标准误。**
+- 国家队征召导致的"外生缺阵"对球队攻防指标影响: "Missing pieces, new patterns: the
+  impact of association football international call-ups on team offensive and defensive
+  performance indicators." [PMC全文页](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC12872852/)
+  (被当前环境代理拦截,未能直接WebFetch读取,以上方向性结论经WebSearch摘要交叉印证,
+  具体效应量数字未核实到)
+  ("Crafting a Player Impact Metric through analysis of football match event data,"
+  ScienceDirect, 2025年5月),证实需要事件级position/xT数据,和本项目"9-12"节已排除的
+  完整xG方案数据门槛相同,同样只经WebSearch摘要获得,未直接读取原文。
+- 阵容公布窗口内盘口反应速度、进攻/防守球员缺阵对预期总进球方向性影响的从业者/营销类来源
+  (可信度低,仅作方向性线索,不作为证据引用): [mybookie.ag](https://www.mybookie.ag/sports-betting-guide/how-injuries-and-starting-lineups-affect-soccer-betting-odds/),
+  [winfulltime.com](https://winfulltime.com/blog/why-football-odds-change-before-a-match.html),
+  [betsuite.ai](https://betsuite.ai/blog/understanding-line-movement-guide)
+- nowgoal平台整体提供阵容/lineup信息的通用介绍(非本项目覆盖联赛逐一核实):
+  经WebSearch摘要获得,未直接访问具体比赛页面核实。
+
+**方法论诚实说明**:这次同样遇到和"9-11""9-13"两次记录一致的代理拦截问题
+(wiley/oup/researchgate/pmc.ncbi.nlm.nih.gov/arxiv.org均无法直接WebFetch),核心的
+Croxson & Reade论文和国家队缺阵研究都只读到摘要没读到全文。**但这次更重要的诚实说明是
+方法论上的**:这是笔记里第一次出现"研究完之后,最有价值的产出是发现本仓库自己的数据字段
+(last_time/snap_time)含义不明,需要先做本地核实,而不是外部文献不够"——外部文献这次
+基本证实了"阵容确认有明确官方时点""大市场对重大信息反应极快"这两个方向性事实,但能不能
+对本项目有用,卡在一个纯本地的、不需要任何研究工具就能回答的问题上,应该作为以后接手这条
+研究线索时的第一步,而不是继续查更多文献。
+
+---
+
+## 2026-09-16 数据窥探/选择偏差的正式统计方法:White's Reality Check、SPA检验、Deflated Sharpe Ratio——把"不要试第4个筛选条件"这句话变成可以量化的检验
+
+### 为什么研究这个,以及和已有记录的对应关系
+
+翻遍笔记全文确认:任务清单里列的六个方向性主题(泊松/Dixon-Coles细节、联赛进球基准、公众
+下注偏好、xG方法论、去水法、sharp money识别)都已经至少查过一轮,唯独"样本量与统计显著性
+在体育博彩回测里的正确用法"这一条,虽然多次被提到(9-10续2查过"检测2%优势需要50轮×7个
+市场"的样本量数字、19场三次分层测试反复强调"选择偏差"、Shin去水法测试时用了McNemar检验),
+但**从来没有查过、用过任何一种正式的"多重检验/数据窥探(data snooping)"统计校正方法**——
+笔记里反复出现的"不要在同一小样本上继续换着法子试第4个筛选条件,那样迟早会试出一个看起来
+好看的,但那是选择偏差"这句话,到目前为止只是一条经验戒律,从未被量化过:到底试了几次之后,
+"看起来显著"的结果有多大概率纯粹是巧合?这次定向查这个问题本身有没有现成的、可以直接采用的
+统计方法,而不是继续凭直觉自我约束。
+
+### 查到的东西(这次搜索环境有明确限制,见文末诚实说明)
+
+**1. White's Reality Check(White, 2000, *Econometrica*)**——这类方法里最早、最经典的一个。
+解决的问题:如果你在同一份历史数据上测试了一整批候选策略/规则,只挑出其中表现最好的一个
+报告出来,这个"最好的"表现有多少是真本事、多少纯粹是"矮子里面挑出的将军"?检验的原假设是
+"整个候选集合里表现最好的那个策略,相对于某个基准(比如无脑策略/零收益),也没有真实的
+超额表现"。做法是用**stationary bootstrap(平稳自助法,Politis & Romano提出,用几何分布
+的随机长度分块重采样,而不是固定长度分块,目的是尽量保留原始时间序列里的弱相关结构)**对
+"每个候选策略相对基准的逐期表现差"这组序列做联合重采样(保留策略之间的相关性一起采),
+构造出"如果所有策略真的都没有超额表现"这个原假设下,"候选集合里最好那个策略的表现"能有
+多好的自助法抽样分布,再拿真实观测到的"最好策略的表现"去对照这个分布算p值——这个p值已经
+把"从一堆候选里挑最好的"这个动作本身考虑进去了,不是单独检验这一个策略。经典应用:
+Sullivan, Timmermann & White(1999,*Journal of Finance*)用这个方法测了**2127条技术分析
+交易规则**在标普500上的表现,结果显示"看起来最赚钱"的那条规则,在Reality Check下并不能
+拒绝"纯属运气"的原假设。**已知缺陷(下面Hansen的论文指出)**:Reality Check有一个反直觉的
+弱点——往候选集合里多塞几条"明显很差、根本不可能表现好"的策略,会让检验变得更保守(更难
+拒绝原假设),这不是一个好的统计检验该有的性质。
+
+**2. Hansen's SPA检验(Hansen, 2005, *Journal of Business & Economic Statistics*)**——
+针对上面那个缺陷的改进版。核心改动:把每个候选策略的表现差先除以它自己的(HAC稳健)标准差
+再取最大值(studentize,学生化),而不是直接比较原始表现差的大小,这样方差本来就很大、本身
+就不稳定的"烂策略"不会不成比例地拉高整个检验的保守程度,让检验**更有效力(power更高)、
+不那么保守**。相关的延伸方法:**Romano & Wolf(2005)的StepM(stepwise multiple testing)**
+在同一套bootstrap逻辑上做了一个"逐步剔除"程序——先检验并剔除掉集合里显著跑赢基准的最好
+策略,再对剩下的策略重新构造一个(缩小后的)联合置信区域,反复迭代,目的是**找出所有真正
+显著跑赢基准的策略,而不只是挑出唯一"最好"的那一个**,同时依然控制"整个族里出现假阳性"的
+概率——这个思路直接对应笔记"9-10续"那节"全票一致/偏离幅度/参与公司数"三种筛选一起测的
+场景:StepM式的做法是三个一起放进候选集合联合检验,而不是像笔记记录的那样一个一个单独看
+有没有显著。
+
+**3. Deflated Sharpe Ratio(Bailey & López de Prado, 2014)**——这次查到细节最完整、
+最可以直接套用数字的一个方法,核心机制是"用测试过的策略数量N,反推'纯属运气'情况下能
+达到的最佳表现有多好,再拿真实观测值去跟这个'运气基准'比,而不是跟0比"。
+
+- 第一步是Probabilistic Sharpe Ratio(PSR,同作者2012年"The Sharpe Ratio Efficient
+  Frontier"),大意结构是:把观测到的Sharpe比率SR̂减去要挑战的基准SR*,除以一个同时考虑了
+  样本量T、收益率偏度γ₃、峰度γ₄的标准误,再套标准正态CDF算出"SR̂真的超过SR*"的概率——
+  偏度越负、峰度(肥尾)越高,分母越大,同样的点估计Sharpe比率需要更长的观测期才能达到
+  同等的置信度。
+- 第二步(真正的多重检验校正)是"N次独立试验下,预期能达到的最大Sharpe比率"的解析近似公式,
+  结构上是"试验间Sharpe比率的方差" × "一个由N和欧拉-马歇罗尼常数(γ≈0.5772)构成的
+  极值项"——**这是一个极值理论的结果:哪怕N个策略的真实Sharpe比率全部是0(完全没有真本事),
+  只要N足够大,里面"看起来最好"的那个,预期Sharpe比率也会显著大于0,而且这个"虚假的最佳
+  表现"会随着N和策略间表现的离散程度系统性上升**。查到的具体数字示例(多个来源交叉印证):
+  假设策略间Sharpe比率方差为1,**测试1000个独立策略后,即使每个策略的真实Sharpe比率都是0,
+  预期最好的那个也会显示出约3.26的Sharpe比率**——这是这类方法里最直观的一个警示性数字,
+  直接说明"回测出一个好看的数字"和"这个数字反映真实优势"是两件完全不同的事,差距会随着
+  试验次数系统性拉大。
+- 第三步:把这个"N次试验下预期最佳表现"代入第一步PSR公式里原本"要挑战的基准SR*"的位置,
+  得到DSR——也就是说,DSR真正检验的原假设不是"真实优势=0",而是**"真实优势=如果试了这么
+  多次、纯属运气也能达到的最佳表现"**,是一个明显更严格的门槛。
+- 完整用这个方法需要五个输入:观测期长度T、策略收益的偏度γ₃、峰度γ₄、试验次数N、以及
+  N次试验里各自Sharpe比率的方差。**这最后两个恰恰是笔记里从来没有正式记录过的东西**——
+  笔记记录了很多次"测了什么、结果如何",但从未把"这是第几次独立试验"和"这批试验各自的
+  表现分布"系统整理成一份可以拿来算N和方差的清单。
+- 配套的实用结论(Minimum Backtest Length,MinBTL,Bailey/Borwein/López de Prado/Zhu
+  "The Probability of Backtest Overfitting"里给出的示例数字):**只有5年数据量的回测,
+  最多能容忍尝试大约45种独立的模型/参数配置,超过这个数量,几乎必然会"试出"一个样本内
+  Sharpe比率看起来有1、但样本外真实Sharpe比率其实是0的假发现**。这个"用可用数据量反推
+  能承受多少次独立试验"的思路,和笔记"9-10续2"已经记录的"检测2%优势需要50轮×7个市场的
+  样本"是同一类校准,但角度是反过来的(那条是"要多少数据才能测出一个给定优势",这条是
+  "给定这么多数据,最多能试几次而不至于测出假发现")——两条可以互相印证,值得以后一起用。
+
+**4. 更简单的替代方案:Bonferroni校正 vs. False Discovery Rate(Benjamini-Hochberg,1995)**。
+Bonferroni是最简单的做法——把目标显著性水平α除以试验次数m,每个假设都用α/m这个更严的
+门槛去检验,保证"整个族里出现任何一个假阳性"的概率不超过α;缺点是**当试验数量变多、且
+试验之间彼此相关(这正是本项目的情况——比如"偏离幅度>0.3"和"偏离幅度>0.4"这两种筛选
+本质上高度相关,不是互相独立的两次试验)时,Bonferroni会变得过度保守,把力度也很难拒绝掉**。
+Benjamini-Hochberg控制的不是"是否出现任何假阳性",而是"被判定为显著的这批结果里,假阳性
+占的期望比例"——试验次数多的时候比Bonferroni更有效力。**Harvey & Liu(2015,"Backtesting",
+Journal of Portfolio Management,及同作者"Evaluating Trading Strategies")直接把这套逻辑
+应用到量化交易策略回测上**,提出对报告出来的Sharpe比率做"haircut(打折)",并明确对比了
+三种校正方法的严格程度:Bonferroni(最严格,单步)→ Holm(Bonferroni的序贯/逐步版本,
+同等条件下比纯Bonferroni宽松一些,但需要"所有试过的策略各自的p值"这份完整名单,不能只有
+最后赢家的p值)→ BHY(Benjamini-Hochberg-Yekutieli,控制FDR而非FWER,三者里打折最轻)。
+**Holm和BHY都要求研究者保留"每一个试过的策略/规则的真实结果",不能事后凭记忆补——这一点
+和本项目的实际情况直接冲突:笔记里"全票一致/偏离幅度/参与公司数"这三个筛选条件虽然都记录
+了结果,但没有把它们当成"同一批需要联合校正的N次试验"正式整理过,现在如果想补做这个校正,
+这三条的结果已经在笔记里,可以拿来当一个小规模的示范案例。**
+
+**5. 直接应用到体育博彩回测的先例:这次没有查到。** 多次尝试搜索"data snooping sports
+betting""deflated sharpe ratio sports betting""White's reality check betting"等
+关键词,只查到体育博彩市场效率的一般性文献(讨论统计功效、样本量,但不使用Reality
+Check/SPA/DSR/FDR这几种具体方法),以及量化金融领域这几个方法本身的介绍——**没有找到
+任何一篇论文把Reality Check、SPA检验、Deflated Sharpe Ratio或FDR校正直接用在体育博彩
+策略回测上。这是一个真实的方法论空白,不是搜索技巧不够:如果本项目要用这套方法,是把
+一套成熟的量化金融方法论"嫁接"过来,不是照抄一篇体育博彩领域已经做过的现成案例。**
+
+**6. 试验次数N该怎么数,当"试验"是研究过程中陆续做的决策、不是一次性网格搜索时**——这正好
+是本项目的实际情况(不是一次性把所有筛选条件放进一个脚本网格搜索,而是这几天陆续想到一个
+测一个)。查到的结论比较一致但也比较令人无奈:**这几种方法(尤其DSR)的可信度完全依赖于
+"如实记录到底试了多少次",而目前查到的所有资料都没有提供"事后如何反推补算N"的公式——
+一致的建议是"从现在开始如实记录每一次试验",而不是"用某个公式把过去没记录的试验次数
+估算出来"。** 另外查到一个方向性的补充:当候选试验之间彼此相关(本项目"偏离幅度"不同阈值
+之间显然高度相关)时,该用的不是试验的"字面数量",而是"有效独立试验数"——有来源(可信度
+中等,只有摘要级信息)提到可以用相关矩阵的有效秩(effective rank)、随机矩阵理论
+(Marchenko-Pastur)划分信号/噪声特征值、或者直接对高度相关的试验做聚类后按簇计数这几种
+思路来估算"有效N",但都停留在方向性描述,没有查到可以直接套用的具体公式。**唯一相对可操作
+的建议是:Harvey & Liu的Holm/BHY方法因为直接用"所有实际跑过的试验的经验p值分布"而不是
+假设的独立性结构,对这种"陆续做的、非规整网格搜索"的研究过程反而更友好——前提依然是每次
+都要把结果记下来,不能只记录"赢家"。**
+
+### 与本仓库的对应关系:这次是纯方法论/纪律层面的接入,不涉及v8_backtest_pipeline.py的
+信号计算逻辑,但涉及一个新的记录习惯
+
+这次查到的方法全部作用于"怎么解读一批回测结果",不改变`compute_odds_drift_signal()`/
+`compute_expected_goals()`本身怎么算,所以**不需要给`v8_backtest_pipeline.py`加任何新
+数据字段**,但需要区分清楚可以做和做不到的部分:
+
+1. **做不到、必须如实承认的部分**:笔记里已经记录的那些历史测试(19场三次分层、79场固定
+   规则回测、Shin vs multiplicative去水法、leader/follower分层、confidence_prob校准
+   检验、K联赛/日职联/英超三个联赛的Dixon-Coles验证……)**都不是按照"预先登记试验、事后
+   联合校正"的纪律做的,现在没有办法严谨地回填出一个"总共试了N次"的数字去套DSR公式**——
+   上面查到的资料明确说这类事后补算没有公式可用,勉强凑一个N出来,本身就是又一次"看起来
+   有理有据但其实是编造精确度"的陷阱,不能做。
+2. **低成本、可以立刻开始做、不需要改动任何现有脚本**:从这次研究之后,**新建一个持续
+   追加的"试验登记表"**(比如一个简单的`trials_log.json`或者干脆是本笔记里的一个专门
+   小节),每次测试一个新的筛选规则/阈值/权重变体时,不管结果好坏都记录:测试日期、规则
+   的具体定义、用的样本(哪些比赛、多少场)、命中率/ROI、以及"这是不是和之前某次试验高度
+   相关的变体"。这是这次研究里反复强调的、唯一真正能让Bonferroni/Holm/BHY/DSR这几种方法
+   将来变得可用的前提条件,而且成本很低——不需要等这份表"够大"才有用,从现在这次研究记录
+   开始算起就可以。
+3. **中等成本、以后有了这份登记表之后可以做**:等积累了足够多"正式登记"的试验(哪怕只有
+   5-10条),可以用最简单的Bonferroni或者Benjamini-Hochberg(不需要先跳到Reality
+   Check/SPA/DSR这几种更复杂的bootstrap方法)重新检验一遍笔记里那些"看起来有微弱效果"
+   的发现(比如"水位一致性对大方向57.4%"这类)在校正后是否还站得住——这一步是纯统计
+   计算,可以在独立分析脚本里做,不用碰`v8_backtest_pipeline.py`主逻辑。
+4. **明确不建议做的事**:不要现在就为了套用DSR/Reality Check这类方法,反过来去"凑"一个
+   历史试验次数的估计值,然后据此宣布笔记里某条结论"通过了/没通过多重检验校正"——这次
+   查到的资料反复强调这类方法的可信度完全建立在诚实计数之上,事后编一个数字代入公式,
+   得到的结论比不做校正更容易误导人。
+
+### 信息来源与可靠性说明(这次的限制比之前几节更严重,需要重点如实说明)
+
+**这次会话里WebFetch工具对测试过的所有域名(包括davidhbailey.com、en.wikipedia.org、
+homepage.ntu.edu.tw、marti.ai、medium.com、rdrr.io,甚至example.com、google.com这种
+完全无关痛痒的域名)全部返回连接被拦截,比笔记"9-11""9-13""9-15"几次记录的"部分学术
+域名被拦截"范围更大——这次相当于本次会话里WebFetch整体不可用,以下全部内容只来自
+WebSearch返回的搜索引擎摘要/交叉印证,没有一篇论文原文被直接读取到。** 这比笔记之前
+标注过的任何一次"降级为摘要级别"都更彻底,里面提到的具体公式(尤其PSR/DSR的数学表达式、
+峰度到底是超额峰度还是原始峰度)、"1000次试验预期最佳Sharpe≈3.26"和"5年数据最多容忍
+45次试验"这两个具体数字,都需要以后有条件时找到原文或者至少找到能直接访问的PDF/代码
+实现(比如查到但未验证的GitHub仓库`rubenbriones/Probabilistic-Sharpe-Ratio`)重新核实,
+不能直接当成精确公式写进任何计算脚本。
+
+- White(2000), "A Reality Check for Data Snooping", *Econometrica* 68(5):
+  [Wiley摘要](https://onlinelibrary.wiley.com/doi/abs/10.1111/1468-0262.00152),
+  [Econometric Society条目](https://www.econometricsociety.org/publications/econometrica/2000/09/01/reality-check-data-snooping)
+- Sullivan, Timmermann & White(1999), "Data-Snooping, Technical Trading Rule Performance,
+  and the Bootstrap", *Journal of Finance*(2127条技术分析规则的实证):
+  [Wiley](https://onlinelibrary.wiley.com/doi/10.1111/0022-1082.00163)
+- Hansen(2005), "A Test for Superior Predictive Ability", *Journal of Business &
+  Economic Statistics*: [SSRN摘要](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=264569),
+  [Taylor & Francis](https://www.tandfonline.com/doi/abs/10.1198/073500105000000063)
+- Romano & Wolf(2005), "Stepwise Multiple Testing as Formalized Data Snooping"
+  (StepM方法):经搜索引擎摘要交叉印证,未找到可直接核实的免费全文链接。
+- Bailey & López de Prado(2012), "The Sharpe Ratio Efficient Frontier"(PSR的原始出处)
+  与(2014), "The Deflated Sharpe Ratio: Correcting for Selection Bias, Backtest
+  Overfitting, and Non-Normality":[SSRN摘要](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2460551),
+  [davidhbailey.com PDF链接](https://www.davidhbailey.com/dhbpapers/deflated-sharpe.pdf)
+  (未能直接WebFetch),[Wikipedia "Deflated Sharpe ratio"词条](https://en.wikipedia.org/wiki/Deflated_Sharpe_ratio)
+  (未能直接WebFetch,经搜索引擎摘要获得),[Quantdare博客讲解](https://quantdare.com/deflated-sharpe-ratio-how-to-avoid-been-fooled-by-randomness/),
+  [ML4T文档](https://www.ml4trading.io/docs/diagnostic/methods/deflated-sharpe-ratio/),
+  [GitHub参考实现 rubenbriones/Probabilistic-Sharpe-Ratio](https://github.com/rubenbriones/Probabilistic-Sharpe-Ratio/blob/master/src/sharpe_ratio_stats.py)
+  (代码本身未读取,仅确认仓库存在,以后如果要实现可以直接去读这份代码而不是凭这次的摘要
+  自己重新推公式)
+- Bailey, Borwein, López de Prado & Zhu, "The Probability of Backtest Overfitting"
+  及配套讲稿(MinBTL≈45次试验/5年数据这个示例数字出处):
+  [davidhbailey.com讲稿PDF链接](https://www.davidhbailey.com/dhbtalks/battle-quants.pdf)
+  (未能直接WebFetch)
+- López de Prado & Porcu,"The Deflated Sharpe Ratio: A Unified Framework for
+  Search-Adjusted Performance Inference"(2025年较新的延伸,提出DSR-L/DSR-LS/DSR-EO
+  三种变体,DSR-EO用完整搜索分布而非假设的极值近似,可能是"如何处理非规整/序贯试验过程"
+  这个问题最直接相关的后续文献):[SSRN摘要 7198158](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=7198158)
+  (仅摘要级信息,未能核实具体机制)
+- Harvey & Liu(2015), "Backtesting", *Journal of Portfolio Management* 及"Evaluating
+  Trading Strategies"(haircut Sharpe ratio,Bonferroni/Holm/BHY三种多重检验校正的
+  对比):[SSRN 2345489](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2345489),
+  [SSRN 2474755](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2474755),
+  [OpenSourceQuant对该论文的R语言复现讲解](https://opensourcequant.wordpress.com/2016/11/17/r-view-backtesting-harvey-liu-2015/),
+  [rdocumentation.org的haircutSharpe函数文档](https://www.rdocumentation.org/packages/quantstrat/versions/0.16.7/topics/haircutSharpe)
+  (`quantstrat::haircutSharpe`是一个可以直接安装查看的R实现,以后如果要落地这个方法,
+  比凭搜索摘要重新推导更可靠)
+- Benjamini & Hochberg(1995), "Controlling the False Discovery Rate: A Practical and
+  Powerful Approach to Multiple Testing", *JRSS-B*:
+  [Oxford Academic](https://academic.oup.com/jrsssb/article/57/1/289/7035855)
+- Harvey, Liu & Zhu(2016),"...and the Cross-Section of Expected Returns",*Review of
+  Financial Studies*(不是体育博彩文献,但提供了"因为文献里测过几百个因子,新因子的t值
+  门槛应该从传统的2.0提高到3.0"这个同一类逻辑的著名旁证):
+  [NBER工作论文PDF链接](https://www.nber.org/system/files/working_papers/w20592/w20592.pdf)
+  (未能直接WebFetch)
+- "有效试验次数"在相关/非独立试验场景下如何估算(effective rank、Marchenko-Pastur、
+  聚类计数,仅方向性描述,可信度中等):[VertoxQuant博客](https://www.vertoxquant.com/p/the-effective-number-of-tested-strategies)
+  (未能直接WebFetch,仅搜索引擎摘要)
+- 体育博彩市场效率一般性文献(确认"直接应用这几种多重检验方法到体育博彩"这个空白,而非
+  提供反例):[PMC: A statistical theory of optimal decision-making in sports betting](https://pmc.ncbi.nlm.nih.gov/articles/PMC10306238/),
+  [AEA: Betting Markets and Market Efficiency: Evidence from College Football](https://www.aeaweb.org/conference/2010/retrieve.php?pdfid=406)
+
+**方法论诚实说明(重复强调,因为这次的限制比以往严重)**:本节所有具体公式、参数含义
+(尤其"峰度γ₄到底是原始峰度还是超额峰度"这一点,不同摘要来源的表述不完全一致,这次没能
+核实清楚)、"约3.26""约45次"这两个具体数字,均来自WebSearch摘要交叉印证,**没有一篇被
+直接WebFetch读取全文**——这次连example.com、google.com这类完全无关的域名都被环境代理
+拦截,说明这次的限制更可能是本次会话/环境层面的问题,而不是学术域名本身的问题,以后重新
+research时应该先确认WebFetch本身是否恢复正常,而不是默认这次的限制会一直持续。在正式把
+这些公式写进任何计算脚本之前,必须先找到能直接访问的原文或者上面列出的开源代码实现
+(`quantstrat::haircutSharpe`、`rubenbriones/Probabilistic-Sharpe-Ratio`)核实一遍。
+
+---
+
+## 2026-09-17 预测组合(forecast combination)与"去相关"方法论:市场信号重组已到天花板之后,被漏掉的第三条路
+
+### 为什么研究这个,以及和已有记录的关系
+
+笔记里到目前为止,面对"要不要用独立于盘口的信号"这个问题,实际上只测过两种极端做法:
+(1) 完全用盘口衍生信号做各种切法(全票一致/偏离幅度/leader-follower/去水法……),已经在
+"2026-09-11续2"被两篇文献(ELO-Odds、EMH)从理论上判了天花板;(2) 真正独立的信号
+(简易泊松、真Dixon-Coles)算出来之后,拿它的**独立命中率**去和盘口基线赛马,三次都输
+("已废弃"的简易泊松、"9-11续3"三联赛Dixon-Coles全部没跑赢基线)。**这次定向查的是被
+这两个极端漏掉的中间地带:学术上"结合预测"(forecast combination)这个成熟子领域,专门
+研究"一个独立信号本身打不赢基准,能不能通过和基准做数学上的组合、而不是替代,仍然获得
+增量"——这和"9-11续3"结束时留下的问题(真Dixon-Coles三个联赛都没赢,但没有人测过它和
+市场组合起来会怎样)直接对应,而且**不需要任何新数据**,可以直接复用"9-11续3"已经产出的
+三联赛Dixon-Coles概率和现有v8盘口信号的历史数据重新算一遍,是这次为数不多"不需要先解决
+数据缺口"就能验证的方向。
+
+### 查到的东西
+
+**Part A:真正的学术先例——Bayesian凸组合模型,不是简单加权规则**
+
+**Egidi, Pauli & Torelli (2018), "Combining historical data and bookmakers' odds in
+modelling football scores", *Statistical Modelling*, 18(5-6), 436-459.** 这篇论文和本节
+问题几乎是一一对应:构建了一个层级贝叶斯泊松模型,**每支球队的进球率(λ/μ)本身就是"历史
+战绩估计出的进球率"和"盘口赔率反推出的进球率"两个来源的凸组合(convex combination)**,
+组合权重从数据里估计,不是人工拍定。用9个赛季的欧洲主流联赛数据训练,预测第10个赛季。
+查到的方向性结论(多个独立信源——SAGE期刊页、ResearchGate、ADS、academia.edu、DeepAI——
+交叉印证同一个模型结构描述,机制描述可信度较高):这个组合模型的预测准确度能做到和博彩公司
+持平甚至更好,而且**即使考虑博彩公司自带的抽水(overround),在用最高/平均/常见赔率结算时
+都显示出正的模拟收益**。**必须如实说明:这次WebFetch对arxiv.org、arts.units.it(的里雅斯特
+大学postprint)、deepai.org、semanticscholar.org全部返回连接层拦截(`EGRESS_BLOCKED`),
+和"9-16"那节记录的"WebFetch本次会话整体不可用"是同一种限制的延续——上面的机制描述和结论
+方向经多个搜索引擎摘要来源交叉印证,但具体的组合权重数值、准确度指标(RPS/pseudo-R²等)
+的精确数字这次完全没有拿到,不能当成可以直接抄的公式或数字。**
+
+**这个模型结构和本项目此前"两模型冲突时信进球模型"(已废弃)的关键区别,必须说清楚,不要
+误以为是同一个东西测第二遍**:已废弃的那条规则是**二元覆盖**——盘口和进球模型方向冲突时,
+整场比赛只信进球模型(0/1开关);Egidi等人的方法是在**进球率这个连续量**上做凸组合(比如
+`λ_combined = w·λ_历史 + (1-w)·λ_赔率反推`,w是从数据估出的连续权重,不是"哪个对就全信谁"
+的开关),就算独立信号本身很弱(w很小),组合后的结果理论上也不会比单纯盘口更差——这是
+"混合"和"二选一覆盖"两种完全不同的数学操作,后者已经测过失败,不能代表前者也失败。
+
+**Part B:直接可用的开源实现——footBayes包,这次真正读到了源码原文,不是摘要**
+
+**这部分是本次会话唯一绕开WebFetch拦截、读到第一手原始内容的部分**:`raw.githubusercontent.com`
+这个域名这次没有被拦截(和"9-11续3"时`mberk/shin`可以`pip install`但读不到论文原文类似,
+这次是"代码本身能读到,论文原文读不到"),直接读取了
+[LeoEgidi/footBayes](https://github.com/LeoEgidi/footBayes) 仓库的
+`R/mle_foot.R`、`R/stan_foot.R`、`man/stan_foot.Rd`、`DESCRIPTION`、`README.md`
+这几个文件的真实内容(不是搜索引擎摘要)。这个包是Egidi(上面2018论文的第一作者)团队
+持续维护的框架,`stan_foot()` 支持二元泊松/Dixon-Coles/Skellam等多种进球分布模型,和
+本项目"9-11续3"到"9-13"三节做的手工scipy实现是同一类模型,但多了两个直接相关、本项目
+从未考虑过的机制:
+
+1. **`dynamic_weight=TRUE` + `dynamic_type="weekly"/"seasonal"`**:实现的是
+   Macrì Demartino, Egidi & Torelli (2026, *JRSS-C*, doi:10.1093/jrsssc/qlag032)的
+   "commensurate priors + spike-and-slab超参数"动态模型——球队攻防强度按周或按赛季
+   动态演化,**每支球队每个时间段各自有独立的、由spike-and-slab超参数控制的收缩力度**,
+   不是"9-13"那节提出的单一全局τ²(所有球队用同一个收缩强度)。这直接回应"9-13"那节
+   自己承认的局限("单一τ²通过似然曲率自动实现数据越少收缩越强,不需要按球队踢了几场手动
+   分档"——但这仍然是全局一个先验方差,不是按球队再分层);也直接对应"9-11续3"记录的
+   已知缺口#3(K联赛冠军组/保级组分组导致γ算出负值)——`dynamic_type="seasonal"`这种
+   "按赛季阶段切换"的动态权重,结构上正是为处理"同一个联赛内部赛程结构发生变化"这类情况
+   设计的,值得以后重新做K联赛拟合时对照参考(不代表现成能直接套用,K联赛的冠军组/保级组
+   分裂和欧洲联赛常规赛季中的"动态"含义不完全一样,需要专门确认这个机制是否覆盖这种赛程
+   结构)。
+2. **`ranking` 参数**:接受一个外部的"每支球队每个时间段的排名分数"(`rank_points`)
+   数据框,配合 `norm_method`("standard"/"mad"/"min_max"等标准化方式)把这个外部排名
+   当成弱信息先验注入模型——文档和README明确说明这个参数设计给FIFA排名/Elo这类外部评级
+   系统用,**没有现成的"喂盘口反推强度"用法**,但这个参数槽位本身是通用的:理论上可以把
+   "赔率反推出的球队攻防强度"当成一种自定义"ranking"喂进去,让模型自动决定这个外部信息
+   该被信多少(通过spike-and-slab机制),而不是像Egidi 2018原始论文那样单独重新写一个
+   凸组合模型。**这比"9-13"那节提出的手写L2正则化更精细一步(数据量越少的球队自动更依赖
+   外部先验),但需要先确认`ranking`参数接受的输入格式能不能塞进"赔率反推强度"这种非标准
+   排名数据,这次没有做这个验证,只是指出这个槽位存在。**
+
+### Part C:预测组合的一般原理——"简单平均"这个最保守的组合方式,本身就有理论依据
+
+这方面查到的是**通用预测学文献**,不是体育博彩专门文献,但和上面Part A的"凸组合"直接呼应,
+补上了"组合权重该怎么定"这个实操问题:**"forecast combination puzzle"**(源自Bates &
+Granger 1969提出"组合多个预测比只用最好的单一预测更准"这个经典结论之后,后续文献反复发现
+的一个反直觉现象)——**简单等权平均,经常比"用历史误差方差/协方差估计出理论最优权重"这种
+更精细的组合方式更稳健、更难打败**,尤其是在可用于估计权重的样本量不够大、或者候选预测
+数量不多的时候(样本量小则估计出来的"最优权重"本身方差很大,精细化组合反而引入了额外的
+估计噪声)。**这直接给出一条务实建议**:如果以后真要把Dixon-Coles概率和v8现有composite
+隐含概率做组合,**第一步应该先试最简单的50/50等权平均,而不是急着用历史数据拟合一个"最优
+混合权重"**——本项目历史数据规模(K联赛125场train/42场test这个量级)本来就小,"9-16"
+那节已经查过"体育博彩里检测2%优势需要50轮×7个市场"的样本量要求,在这么小的样本上再去拟合
+一个额外的混合权重参数,大概率会重复"过拟合出一个看起来好但纯属噪声的权重"这个陷阱,等权
+平均没有这个自由度可以过拟合,是更安全的起点。
+
+### Part D:一个更根本的概念校正——"打赢市场"不需要模型本身更准,只需要误差和市场不相关
+
+**Hubáček & Šír, "Beating the market with a bad predictive model"(2020年提交arXiv
+2010.12508,后续发表于*International Journal of Forecasting*)**——这篇的核心论点直接
+回应"9-11续2"那条元结论留下的一个隐含疑问:如果任何独立信号本身达不到市场的准确度就没有
+价值,那"独立数据源"这条路是不是从根上就走不通?这篇论文说:**不是。系统性盈利不需要"模型
+本身比市场更准",只需要模型的预测误差和市场定价的误差**"去相关"(decorrelate)**——
+论文明确把训练目标从"让模型本身预测更准"改成"显式让模型的输出和市场共识去相关",作者称
+这样能捕捉到市场定价里"不起眼的偏差"(inconspicuous biases),并且明确把股票交易和体育
+博彩这两个领域放在同一个框架下讨论。查到的一处具体机制性描述(仅摘要级,未读到原文验证):
+"增加去相关程度"总体上会增加"模型正确预测冷门获胜"这类被市场低估的机会,但如果去相关做得
+过猛,同时也会成比例地增加"押冷门押错"的次数,两者会互相抵消——**这提示"去相关"本身不是
+越多越好,存在一个需要在样本外验证的最优程度,不是调到底就最赚**。
+
+**这条结论对本项目的意义,是给"9-11续3"三联赛Dixon-Coles"没跑赢基线"这个结果提供了一个
+此前没想到的重新检验角度**:那次评估用的标准是"Dixon-Coles独立命中率 vs 无脑选大/选小
+基线",这正是Hubáček & Šír论文暗示"问错了问题"的评估方式——**真正该测的不是"Dixon-Coles
+自己准不准",而是"Dixon-Coles和v8现有盘口信号的误差,在两者意见不一致的场次上,是不是
+存在系统性、非随机的模式"**。如果两者的错误高度相关(比如都在同一批"意外大比分"的比赛上
+翻车),组合没有意义,"9-11续3"的负面结果就该照单全收;但如果在分歧场次上Dixon-Coles确实
+有和市场不同、且方向正确的偏移,组合(哪怕Dixon-Coles整体比市场差很多)理论上仍然可能有
+增量——这个问题现有数据可以直接回答,不需要新数据,只是此前从未这样问过。
+
+### 与本仓库数据的对应关系、接入建议(供以后决定是否做,不代下结论)
+
+1. **零成本、可以立刻做、复用"9-11续3"已产出的数据**:把K联赛/日职联/英超三个联赛
+   Dixon-Coles算出的Over概率,和这些比赛对应的v8现有盘口composite隐含概率取出来,
+   在train集上先试**最简单的50/50等权平均**(参照Part C,不要先跳到拟合最优权重),
+   在test集上分别对比"纯Dixon-Coles"、"纯v8盘口"、"等权平均组合"三者的命中率和Brier
+   score——这是"9-11续3"结束时留下但没有做的下一步,不需要重新拟合Dixon-Coles模型,
+   也不需要抓任何新数据,是这次接入建议里成本最低、能立刻验证的一条。
+2. **零成本、和上面同一批数据能一起做的诊断**:单独挑出"Dixon-Coles方向 vs v8盘口composite
+   方向"不一致的那个子集,看Dixon-Coles在这个子集上的命中率是否明显偏离50%(不管高于还是
+   低于,只要显著偏离都说明有信息量;如果就在50%附近说明分歧纯粹是噪声)——这是Part D
+   提出的"检验误差是否去相关"的直接可操作版本,样本量取决于三个联赛test集分歧场次的数量
+   (可能只有几十场,需要如实报告置信区间,参照"9-10续2"和"9-16"两节反复强调过的样本量
+   纪律,不能因为看到一个好看的百分比就下结论)。
+3. **中等成本、需要先确认可行性、不改v8主逻辑**:如果上面两步显示组合/分歧子集确实有
+   信息量,再考虑参照footBayes的`ranking`参数机制(Part B),在独立测试脚本里(不是
+   `dixon_coles.py`本身)尝试把"赔率反推的球队强度"当成一种外部弱先验,通过类似
+   commensurate prior的机制注入现有Dixon-Coles拟合,而不是简单地在最终概率层面加权
+   平均——这一步复杂度明显更高,只有前两步验证有效才值得投入,而且需要先确认这类"非标准
+   排名数据"能不能对应到footBayes或自己实现的commensurate prior框架里,这次没有验证。
+4. **明确不建议做的事**:不要把这次的发现理解成"可以回头重新试Shin去水法/leader-follower
+   这类纯盘口内部信号的各种加权组合"——Part A/B/D的方法都要求参与组合的至少一方是**真正
+   独立于盘口的信息源**(历史战绩驱动的进球率模型),对同一份盘口衍生信号(line_sig/
+   water_sig/euro_sig)做加权平均,不满足"两个信息源"这个前提,不会绕开"9-11续2"元结论
+   描述的天花板,组合的价值来自信息源本身独立,不来自组合这个数学操作本身。
+
+### 信息来源与可靠性说明
+
+**这次会话WebFetch的可用性和"9-16"那节记录的情况一致:测试了arxiv.org、
+arts.units.it、deepai.org、semanticscholar.org、www.stat.berkeley.edu、
+en.wikipedia.org、cran.r-project.org、cloud.r-project.org、ida.felk.cvut.cz、
+api.github.com共10个域名,全部返回`EGRESS_BLOCKED`或403,只有`raw.githubusercontent.com`
+成功——这次的footBayes代码/文档内容(Part B引用的`mle_foot.R`、`stan_foot.R`、
+`stan_foot.Rd`、`DESCRIPTION`、`README.md`)是这几个文件里唯一直接读到原始内容、
+不经搜索引擎摘要中转的部分,可信度高于本节其余内容;Part A/C/D的具体数字和机制细节均为
+WebSearch摘要交叉印证多个独立来源所得,不是直接读取论文原文,以后有条件时应重新核实,
+尤其是Egidi等(2018)论文里凸组合权重的具体估计方法和准确度指标数值、Hubáček & Šír
+论文里"去相关"目标函数的具体数学形式。**
+
+- Egidi, L., Pauli, F. & Torelli, N. (2018). "Combining historical data and bookmakers'
+  odds in modelling football scores." *Statistical Modelling*, 18(5-6), 436-459.
+  机制与结论经多个独立来源交叉印证(均未能直接WebFetch核实全文):
+  [SAGE期刊页](https://journals.sagepub.com/doi/abs/10.1177/1471082X18798414),
+  [ResearchGate](https://www.researchgate.net/publication/328490567_Combining_historical_data_and_bookmakers'_odds_in_modelling_football_scores),
+  [arXiv 1802.08848](https://arxiv.org/pdf/1802.08848),
+  [的里雅斯特大学postprint](https://arts.units.it/retrieve/e2913fde-beab-f688-e053-3705fe0a67e0/2930464_paper-PostPrint.pdf),
+  [DeepAI](https://deepai.org/publication/combining-historical-data-and-bookmakers-odds-in-modelling-football-scores),
+  [ADS摘要](https://ui.adsabs.harvard.edu/abs/2018arXiv180208848E/abstract)
+- LeoEgidi/footBayes R包——**本次直接WebFetch读取到原始文件内容,非摘要**:
+  [仓库主页](https://github.com/LeoEgidi/footBayes),
+  [R/mle_foot.R](https://raw.githubusercontent.com/LeoEgidi/footBayes/master/R/mle_foot.R),
+  [R/stan_foot.R](https://raw.githubusercontent.com/LeoEgidi/footBayes/master/R/stan_foot.R),
+  [man/stan_foot.Rd](https://raw.githubusercontent.com/LeoEgidi/footBayes/master/man/stan_foot.Rd),
+  [DESCRIPTION](https://raw.githubusercontent.com/LeoEgidi/footBayes/master/DESCRIPTION),
+  [README.md](https://raw.githubusercontent.com/LeoEgidi/footBayes/master/README.md)
+- Macrì Demartino, G., Egidi, L. & Torelli, N. (2026). "Bayesian weighted discrete-time
+  dynamic models for association football prediction." *Journal of the Royal Statistical
+  Society Series C*, doi:10.1093/jrsssc/qlag032(commensurate priors + spike-and-slab
+  动态权重模型,footBayes `dynamic_weight`参数的出处)。论文本身
+  [arXiv 2508.05891](https://arxiv.org/html/2508.05891v1) 和
+  [期刊页](https://academic.oup.com/jrsssc/advance-article/doi/10.1093/jrsssc/qlag032/8704597)
+  均被当前环境代理拦截,机制描述来自footBayes包文档(已直接读取)对该论文方法的转述,
+  不是读到论文原文本身,具体的spike-and-slab超参数设定以后需要另外核实。
+- Bates, J.M. & Granger, C.W.J. (1969), "The Combination of Forecasts"(forecast
+  combination的奠基文献)与后续"forecast combination puzzle"相关综述:经WebSearch摘要
+  交叉印证,[Wang & Hyndman, "Forecast combinations: an over 50-year review"
+  (arXiv 2205.04216)](https://arxiv.org/pdf/2205.04216),
+  [When to choose the simple average in forecast combination, ScienceDirect](https://www.sciencedirect.com/science/article/abs/pii/S0148296316303952)
+  ——均未能直接WebFetch核实全文。
+- Hubáček, O. & Šír, G., "Beating the market with a bad predictive model"(2020年提交
+  arXiv,后发表于*International Journal of Forecasting*):
+  [arXiv 2010.12508](https://arxiv.org/pdf/2010.12508),
+  [ResearchGate](https://www.researchgate.net/publication/344878637_Beating_the_market_with_a_bad_predictive_model),
+  [作者个人页](https://gustiks.github.io/publication/2009-10-01-paper-title-number-4)
+  ——均未能直接WebFetch核实全文,核心论点(去相关而非准确度是盈利的充分条件)经多个独立
+  搜索结果摘要交叉印证,具体目标函数与数值结果需要以后重新核实。
+- Constantinou, A.C. (2020), "Investigating the efficiency of the Asian handicap football
+  betting market with ratings and Bayesian networks"(本次顺带查到,供以后深挖"让球深浅"
+  信号时参考,这次未展开分析,仅确认存在这篇专门研究亚洲盘让球市场效率的同行评审文献):
+  [arXiv 2003.09384](https://arxiv.org/pdf/2003.09384),
+  [ResearchGate](https://www.researchgate.net/publication/357230266_Investigating_the_efficiency_of_the_Asian_handicap_football_betting_market_with_ratings_and_Bayesian_networks)
+  ——13个英超赛季数据,比较传统1X2市场和亚洲让球盘市场效率,未直接读取全文,留作后续
+  研究"让球深浅"信号时的候选文献,不在本节展开。
+
+---
+
+## 2026-09-18 亚洲让球盘(Asian Handicap)市场效率研究 + 一个代码里确认存在的具体数据丢失缺口(`open_aw`/`last_aw`)
+
+### 为什么研究这个
+
+"2026-09-17"那节末尾已经点名把Constantinou (2020)的亚洲让球盘效率论文列为"留作后续研究
+'让球深浅'信号时的候选文献,不在本节展开"——翻遍笔记全文确认,除了这一句点名和"2026-09-10"
+那节把`compute_odds_drift_signal()`里`handicap_sig`的计算方式简单描述过一遍,**亚洲让球盘
+市场本身的效率、定价机制、"让球深浅"信号该怎么正确处理,从未被当成独立主题深入研究过**——
+这几天笔记密集研究过大小球水位(Shin去水)、欧赔平局代理、联赛进球基准、Dixon-Coles进球模型,
+唯独v8权重结构里占10/55的`handicap`这个分量,一直是笔记里最薄的一环。这次先读代码确认现状,
+再针对性查文献。
+
+### 读代码先确认:`handicap_sig`到底在算什么,发现一个和"欧赔"缺口同类型的具体数据丢失
+
+`v8_backtest_pipeline.py`第84-93行`load_workbook_data()`解析"多庄亚洲盘"sheet:
+
+```python
+(mid, league, kickoff, home, away, status, cid, cname,
+ open_hw, open_line, open_aw, last_hw, last_line, last_aw, last_time,
+ live_hw, live_line, live_aw, verify_status, fh, fa, fscore,
+ fill_status, snap_time, src, note) = r
+if mid not in matches or open_line is None or last_line is None:
+    continue
+ah_by_match[mid].append(dict(open_hw=open_hw, open_line=open_line,
+                              last_hw=last_hw, last_line=last_line))
+```
+
+**`open_aw`/`last_aw`(客队让球水位价格)在第87行被正常解包出来,但第92-93行存进`ah_by_match`
+的dict里根本没有这两个字段——原始数据行里其实有,构造dict这一步把它们静默丢弃了。** 这和
+"2026-09-10(续3)"那节发现的`euro_sig`缺口(欧赔胜平负三项赔率只保留平局、主胜客胜被丢弃)
+是完全同一类问题:**代码只留了让球盘"主队水位"(`hw`)一侧,丢了"客队水位"(`aw`)一侧**,
+后果是第137-150行`handicap_sig`/`trap_flag`的计算完全没有用到`aw`这个字段:
+
+- `handicap_sig`只看`last_line - open_line`(盘口深浅的原始数字变化方向),不是像`water_sig`
+  那样对`hw`/`aw`两个价格做`implied_prob_pair()`去水、再看隐含概率漂移方向——**换句话说,
+  大小球那边"线体漂移"(line_sig)和"水位漂移"(water_sig)是两个独立信号,但让球盘这边只做了
+  "线体漂移"的等价物,"水位漂移"的等价物从未被计算过,不是测过没用,是从未实现。**
+- `trap_flag`(陷阱盘检测:盘口变深但`hw`同时走高,或盘口变浅但`hw`同时走低)只用了单边的
+  `hw`变化方向做符号判断,没有用`hw`+`aw`联合去水算出真正的隐含概率漂移,是比`handicap_sig`
+  更粗糙的启发式。**而且`trap_flag`算出来之后,只是原样放进返回的dict里(第170行),从未参与
+  过composite计算(第152-157行`weights`字典里根本没有`trap`这一项),也从未在笔记任何一节
+  被拿去跟实际赛果做过回测验证——这是一个"写了但没人验证过、也不影响任何预测"的悬空字段。**
+
+### 查到的文献:亚洲盘效率的学术证据,两篇结论方向相反,必须如实并列
+
+**A. Hegarty & Whelan 团队(2023起,多篇关联论文,University College Dublin/CEPR工作论文,
+经WebSearch摘要交叉印证,未能直接WebFetch全文核实,原因见文末说明):**
+
+- **"Forecasting Soccer Matches With Betting Odds: A Tale of Two Markets"**
+  (*International Journal of Forecasting*,已发表版本,CEPR工作论文DP17949,MPRA
+  116925):用大样本欧洲足球比赛数据,**明确发现1X2(胜平负)市场存在系统性的
+  favourite-longshot bias(热门被低估、冷门被高估),但亚洲让球盘市场对同一批比赛
+  没有这个偏差**——用"新的、把让球盘赔率映射成概率的方法"(下面详述),把全样本
+  **168,460笔让球盘投注**按估计概率分成十等分,每一等分实际"全额中出"的频率和估计概率
+  对得上;用加权最小二乘法(WLS)回归"赛果 vs 估计概率",无法拒绝"斜率=1"这个完美校准
+  的原假设。**核心方法论创新**:让球盘(尤其亚盘常见的1/4球、3/4球这类"分盘")结算时
+  存在"平局退半/全退"的情况,传统"1/odds去水再归一化"的简单方法没有处理这种退款
+  可能性,Hegarty & Whelan给出了专门处理"有退款可能"投注的期望损失率估计方法。
+- **配套的姊妹论文"Estimating Expected Loss Rates in Betting Markets: Theory and
+  Evidence"和"Returns on Complex Bets: Evidence From Asian Handicap Betting on
+  Soccer"(以及"Do Gamblers Understand Complex Bets?")**:关键的可操作发现是——**每种
+  让球盘类型(整数盘/半球盘/1/4球盘/3/4球盘)发生"退款"的比例,在样本时间跨度内是稳定的、
+  且不依赖于当前那场比赛具体开出的赔率高低**,可以直接用历史平均退款率当成一个和赔率无关的
+  固定参数代入去水公式,不需要对每场比赛单独建模退款概率。同时发现:**不同让球盘类型之间
+  的实际损失率(玩家平均输钱比例)本身有系统性差异**——没有退款可能的盘口(如1/2球独赢盘)
+  损失率最高,半退款盘口次之,可以全额退款的盘口损失率最低,且这个差异本身可以由赔率
+  高低预测出来。
+- 这一组论文合起来给出的核心结论:**亚洲让球盘市场,只要用正确考虑退款概率的方法去水,
+  校准精度和效率明显优于传统1X2市场**——这是对本项目"欧赔平局代理"这个信号(9-10续3已经
+  测过、Shin去水法没有帮助)的一个新的对照视角:也许不是去水公式(multiplicative vs Shin)
+  的选择不重要,而是**1X2市场本身天生就比让球盘市场更难去水到位**,如果本项目要投入精力
+  改进某一个盘口子信号的去水方法,亚洲让球盘(而不是继续在欧赔或大小球水位上打转)可能是
+  文献证据最支持"值得做对"的那一个。
+
+**B. Constantinou (2020/2022), "Investigating the efficiency of the Asian handicap
+football betting market with ratings and Bayesian networks"(*Journal of Sports
+Analytics*, 8(3), 171-193,笔记"9-17"已经点名但未展开,这次补上):** 用13个英超赛季数据,
+把改良版pi-rating(Constantinou & Fenton提出的、按"实际净胜球 vs 评级预期差距"动态更新
+的球队评级系统,不需要完整MLE联合估计,比Dixon-Coles计算量小很多)喂给一个混合贝叶斯网络
+去同时预测1X2和让球盘结果,**结论与上面Hegarty & Whelan团队相反:亚洲让球盘市场和传统1X2
+市场共享同一类可被利用的低效率,存在能产生正回报的下注策略**。
+
+**这两组结论方向相反,必须原样并列、不能只采信其中一个:** Hegarty & Whelan用的是"用正确
+方法去水后,市场价格本身校准得好不好"这个角度(结论:好,亚盘比1X2更有效率);Constantinou
+用的是"能不能用一个独立的球队实力评级模型系统性跑赢亚盘价格"这个角度(结论:能)。这两个
+问题本身不矛盾**——市场对已知信息定价校准得很好,不代表没有独立于市场之外的新信息(比如
+pi-rating这类球队实力模型)可以再挖出一点edge,这和笔记"9-11续2""9-17"反复强调的"独立
+数据源才可能有增量、重新切分同一份市场信息没有增量"是同一个道理**——但两篇论文的具体
+数字/结论不能不加区分地一起引用,以后如果真要验证,应该分别对应到两件不同的事:(a)用
+Hegarty & Whelan的方法改进本项目对亚盘的去水精度(细信号处理问题);(b)参考Constantinou
+的pi-rating思路做一个独立于盘口的球队实力评级、去检验它和亚盘价格的分歧处是否有信息量
+(这属于"9-17"那节已经提出的"预测组合/去相关"框架,不是重新做另一个简易泊松模型)。
+
+**C. "陷阱盘"(trap game)概念:确认是从业者话术,没有查到可核实的学术研究直接验证它**——
+搜索结果里对"trap game"的描述("盘口开得反常吸引力强,引诱公众下注热门方,实际赛果却相反")
+全部来自博彩教学类网站,和笔记"9-11续"已经点名批评过的BettorEdge同一档次的内容营销性质,
+没有一篇给出可核实的原始样本或统计检验。**能找到的、真正有学术支撑的相关概念只有"反向盘口
+移动"(Reverse Line Movement)——这个概念笔记"9-10"那节已经查过、且当时的leader/follower
+二分法验证被推翻。** 现有代码里`trap_flag`的判定逻辑(盘口变深+hw同时走高,或盘口变浅+hw
+同时走低)本质上就是把RLM这个通用概念套用到"让球盘线体 vs 让球盘hw价格"这一对信号上的一个
+具体实现,**它是一个未经验证的启发式,不是抄自某篇文献的现成结论,以后要用它,必须先用现有
+历史数据(不需要新抓)独立回测它的方向判断准不准,而不是假设"陷阱盘"这个说法本身有可靠的
+理论支撑**。
+
+**D. 补充的机制性背景(让球盘结算规则,教学类来源,可信度中等,仅用于理解代码需要处理什么,
+不引用具体数字结论)**:1/4球、3/4球这类"分盘"让球线,结算时相当于把注单拆成两半分别按相邻
+的两条整数/半球线结算(例如让1¾球等价于一半按让1½球结算、一半按让2球结算),可能出现"全赢+
+半赢""半赢+半输"等组合结果,不是简单的输/赢/走盘三分类——这正是Hegarty & Whelan论文要专门
+处理"退款概率"的原因,也是本项目如果要正确算亚盘"水位漂移"信号时,不能直接照搬`water_sig`
+那种"两边"简单去水公式的地方(大小球的`open_over`/`open_under`理论上也有同样的1/4球分盘
+问题,只是笔记至今没有单独检查过`ou_by_match`里出现1/4球大小球线的比例有多高)。
+
+### 与本仓库数据的对应关系、接入建议(供以后决定是否做,不代下结论)
+
+1. **零成本、可以立刻做、纯数据管道修复,不改变现有信号计算逻辑**:在`load_workbook_data()`
+   第92-93行构造`ah_by_match`的dict时,把已经解包出来但被丢弃的`open_aw`/`last_aw`也存进去
+   (`dict(open_hw=open_hw, open_aw=open_aw, open_line=open_line, last_hw=last_hw,
+   last_aw=last_aw, last_line=last_line)`)。这一步和"9-10续3"当时为了测Shin方法先补回
+   `euro_sig`丢失的主胜/客胜赔率是同一类修复,风险很小,是后面所有验证的前提。
+2. **低成本、需要独立测试脚本(不要改`v8_backtest_pipeline.py`主逻辑)、复用现有历史数据**:
+   补上`aw`字段后,参照`water_sig`的写法,用`implied_prob_pair(hw, aw)`对开盘/临场两个
+   快照分别去水算出"让球盘主队隐含胜率",再取`sign(p_home_live - p_home_open)`得到一个新的
+   `ah_water_sig`,和现有纯线体方向的`handicap_sig`分开,离线跑一遍现有8天/3908场数据集,
+   看这个新信号单独的命中率/Brier score,以及它和现有`handicap_sig`方向一致/冲突时命中率
+   有没有差异——这是完全类比"9-10续3"验证Shin去水法的流程,不需要新抓任何数据。
+3. **低成本、同一批离线测试顺手做**:把从未验证过的`trap_flag`拿现有历史数据真正回测一次
+   (trap_flag=True的场次,大小球方向命中率是否显著偏离整体命中率),参照笔记里"六庄一致
+   偏小复盘"那种处理方式——如果回测显示没有信息量,应该像那次一样明确记录"陷阱盘启发式
+   没有验证出优势",而不是让这个字段继续留在代码里既不用也不删。
+4. **中等成本、只有前两步显示有信息量才值得做**:参照Hegarty & Whelan的方法,给不同类型的
+   让球盘(整数/半球/1/4球/3/4球)分别估计一个基于历史稳定退款率的去水修正,而不是对所有
+   让球盘类型都套用同一个简单的`implied_prob_pair`两边去水公式——这一步需要先统计本项目
+   历史数据里各类让球盘线出现的比例,如果1/4球分盘占比很低,这一步的收益可能不值得投入,
+   需要先用现有数据做这个比例统计再决定。
+5. **高成本、方向明确但不是这次要做的**:如果第2步显示`ah_water_sig`确实比纯线体方向的
+   `handicap_sig`更有信息量,再考虑参照Constantinou的pi-rating思路做一个独立于盘口的球队
+   实力评级(比现有Dixon-Coles联合MLE计算量小很多,理论上对本项目"K联赛125场""日职联
+   135场"这种小样本联赛更友好),去检验它和让球盘价格分歧处是否有可用的信息——这一步要
+   放进"9-17"那节已经建立的"预测组合/去相关"框架里评估,不要单独再造一个"两模型冲突时
+   信谁"的二元开关规则(那条已经被证明失败过一次)。
+6. **明确不建议做的事**:不要因为查到"trap game"这个说法就直接在composite里加一个基于
+   `trap_flag`的规则(比如"trap_flag=True时反向下注")——这个概念本身缺乏可核实的学术
+   支撑,和笔记"9-11续""9-12"已经点名批评过的营销类内容是同一个可信度量级,必须先按
+   上面第3条独立回测过,不能直接采信从业者话术。
+
+### 信息来源与可靠性说明
+
+**这次会话WebFetch再次对几乎所有测试过的域名整体拦截**(arxiv.org、mpra.ub.uni-muenchen.de、
+www.ucd.ie、cepr.org、ouci.dntb.gov.ua、www.semanticscholar.org、content.iospress.com、
+researchpublications.its.qmul.ac.uk、pena.lt、www.karlwhelan.com全部返回`EGRESS_BLOCKED`
+或连接失败),只有`raw.githubusercontent.com`确认可用(用于验证WebFetch工具本身没有整体失效,
+不是这次研究用到的信源)——和"9-16""9-17"两节记录的限制程度一致,**本节全部文献结论均只经
+WebSearch返回的摘要交叉印证多个独立来源得到,没有一篇论文原文被直接读取**,具体数字
+(168,460笔投注、13个英超赛季、"斜率=1"的WLS回归细节、pi-rating的具体学习率参数)以后有
+条件访问原文时必须重新核实,不能直接当成精确数字写进任何计算脚本。代码层面的发现
+(`open_aw`/`last_aw`被丢弃、`trap_flag`未参与composite也未被验证)是直接读取
+`v8_backtest_pipeline.py`源码验证过的,可信度和文献部分不同,是本节最有把握的部分。
+
+- Hegarty, N. & Whelan, K. "Forecasting Soccer Matches With Betting Odds: A Tale of Two
+  Markets."(*International Journal of Forecasting*,已发表):
+  [ScienceDirect](https://www.sciencedirect.com/science/article/pii/S0169207024000670),
+  [CEPR DP17949](https://cepr.org/publications/dp17949),
+  [CEPR VoxEU专栏](https://cepr.org/voxeu/columns/forecasting-soccer-matches-betting-odds-tale-two-markets),
+  [MPRA 116925 PDF](https://mpra.ub.uni-muenchen.de/116925/1/MPRA_paper_116925.pdf),
+  [UCD工作论文WP23_05 PDF](https://www.ucd.ie/economics/t4media/WP23_05.pdf),
+  [UCD Research Repository](https://researchrepository.ucd.ie/entities/publication/4f7f0314-77fd-4111-a54b-7001ba524fe3),
+  [ResearchGate](https://www.researchgate.net/publication/368848754_Forecasting_Soccer_Matches_With_Betting_Odds_A_Tale_of_Two_Markets)
+  ——均未能直接WebFetch核实全文。
+- Hegarty, N. & Whelan, K., "Estimating Expected Loss Rates in Betting Markets: Theory and
+  Evidence": [karlwhelan.com PDF](https://www.karlwhelan.com/Papers/Overround.pdf)(未能
+  直接WebFetch)
+- Hegarty, N. & Whelan, K. (2023), "Returns on Complex Bets: Evidence From Asian Handicap
+  Betting on Soccer."(后发表于*Review of Behavioral Finance*):
+  [karlwhelan.com PDF](https://www.karlwhelan.com/Papers/RBF.pdf),
+  [Emerald期刊页](https://www.emerald.com/insight/content/doi/10.1108/rbf-11-2023-0314/full/html),
+  [IDEAS/RePEc](https://ideas.repec.org/a/eme/rbfpps/rbf-11-2023-0314.html)
+  ——均未能直接WebFetch核实全文。
+- Hegarty, N. & Whelan, K., "Do Gamblers Understand Complex Bets? Evidence From Asian
+  Handicap Betting on Soccer."(CEPR DP18153):
+  [CEPR](https://cepr.org/publications/dp18153),
+  [MPRA 117244 PDF](https://mpra.ub.uni-muenchen.de/117244/1/ComplexBets.pdf)
+  ——均未能直接WebFetch核实全文。
+- Constantinou, A.C. (2022), "Investigating the efficiency of the Asian handicap football
+  betting market with ratings and Bayesian networks." *Journal of Sports Analytics*, 8(3),
+  171-193: [arXiv 2003.09384](https://arxiv.org/pdf/2003.09384),
+  [SAGE/IOS Press期刊页](https://journals.sagepub.com/doi/full/10.3233/JSA-200588),
+  [ResearchGate](https://www.researchgate.net/publication/357230266_Investigating_the_efficiency_of_the_Asian_handicap_football_betting_market_with_ratings_and_Bayesian_networks)
+  ——均未能直接WebFetch核实全文,笔记"9-17"已列出此文献但未展开,这次补上摘要级结论。
+- pi-rating系统(Constantinou & Fenton,球队攻防动态评级、按净胜球与预期差距更新):
+  [penaltyblog文档](https://penaltyblog.readthedocs.io/en/latest/ratings/pi.html),
+  [pena.lt博客说明](https://pena.lt/y/2025/04/14/pi-ratings-the-smarter-way-to-rank-football-teams/)
+  ——均未能直接WebFetch核实全文,仅经WebSearch摘要获得。
+- "陷阱盘"(trap game)从业者话术,可信度低,仅作方向性线索、不作为证据引用:
+  [sportsprediction.asia](https://www.sportsprediction.asia/blog-detail/355/spotting-trap-games-avoid-common-betting-pitfalls.html)
+- 亚洲让球盘1/4球分盘结算机制(教学类来源,机制性描述可信度中等,不涉及具体统计数字):
+  [Wikipedia Asian handicap](https://en.wikipedia.org/wiki/Asian_handicap),
+  [betlance88 1/4球说明](https://betlance88.com/asian-handicap/asian-handicap-quarter-goals/),
+  [oddsgpt让球盘计算器说明](https://www.oddsgpt.com/asian-handicap-calculator/en)
+
+---
+
+## 2026-09-19 confidence_prob的后处理校准方法该怎么选:Platt/Beta/直方分箱,以及诊断校准本身的ECE也有分箱偏差
+
+### 为什么研究这个,以及和已有结论的关系
+
+"2026-09-11(续5)"已经把v8模型的`confidence_prob`做过一次严格的校准检验,结论是**比"统一用
+整体命中率当固定概率"这个最简单基线还差**(Brier: train 0.2516 vs 0.2494基线,test 0.2523
+vs 0.2500基线),并且在文末给出了一句尚未展开的建议:"如果以后想让这个信心分级真正可用,需要
+针对confidence_prob本身做校准(比如isotonic regression或Platt scaling这类标准的post-hoc
+校准方法)"。这次翻遍笔记确认**这句建议提出之后,再没有一节展开研究过"到底该用哪种校准方法、
+为什么"**——这正是任务清单里"样本量与统计显著性在体育博彩回测里的正确用法"这条主题在
+"校准"这个具体子问题上此前没有深挖的部分,而且直接对应代码里一处此前没被指出过的具体事实:
+`v8_backtest_pipeline.py`第159-161行
+
+```python
+prob_over = max(20, min(80, 50 + composite * 20))
+direction = 'over' if prob_over >= 50 else 'under'
+confidence_prob = prob_over if direction == 'over' else 100 - prob_over
+```
+
+**这个`composite -> confidence_prob`的映射,是一个手写的线性压缩公式(乘20、限幅在
+[20,80]),从未用任何历史数据拟合过、也没有任何统计依据**——`composite`本身是四个子信号
+按20/15/10/10加权平均后落在[-1,1]的一个分数(第152-157行),"乘20加50"纯粹是让它看起来像
+一个"50%~80%"区间的百分比,不是通过让预测概率匹配真实频率这个校准目标反推出来的系数。这和
+"9-11续5"测出来的"confidence_prob不能当真实概率用"这个结果完全对得上——那次结果不是
+"校准方法用错了",而是**目前根本没有做过校准这一步**,composite到confidence_prob之间从来
+没有一次拟合。
+
+### 查到的东西(这次WebFetch对几乎全部域名仍然被拦截,只有`raw.githubusercontent.com`能用,
+细节见文末诚实说明)
+
+**Part A:三种标准post-hoc校准方法,核心是"用多少参数去拟合校准曲线",样本量决定该用哪种**
+
+1. **Platt scaling(logistic/sigmoid校准)**:用一条sigmoid曲线
+   `P(y=1|f) = 1 / (1 + exp(A·f + B))`把原始分数`f`(这里对应`composite`,不是已经被
+   压成百分比的`confidence_prob`)重新映射,只有A、B两个参数,用极大似然拟合。**样本量
+   要求最低**——多个独立来源一致指出,当校准集规模小于约1000~2000时Platt scaling优于
+   isotonic regression,因为isotonic的非参数灵活性在小样本下容易过拟合;这个约1000的
+   分界点在多篇文献里反复出现,是这几种方法里唯一给出了具体样本量门槛的比较。**局限**:
+   sigmoid假定校准误差是单调、对称的一条S形曲线,如果真实的校准偏差本身不单调,Platt
+   scaling这个参数形式再怎么拟合也拟合不出来。
+2. **Isotonic regression(保序回归)**:非参数,只要求映射函数单调不减,用逐段常数拟合
+   校准曲线,不假设具体形状,能修正任何单调的失真,但灵活性正是过拟合风险的来源。**多个
+   来源一致给出"约1000个样本以上isotonic开始不劣于甚至优于Platt scaling"这个交叉点**,
+   低于这个量级isotonic的额外灵活性大概率只是在拟合噪声。
+3. **Beta calibration(Kull, Silva Filho & Flach, 2017, AISTATS)**——介于两者之间的
+   一个参数化方案,不是简单的插值折衷,而是有专门的理论动机:用三参数公式
+   `g(ŝ) = 1 / (1 + exp(-c)·ŝ^a / (1-ŝ)^b)`(基于beta分布推导,拟合方式和logistic
+   回归一样简单,只是先对分数做`log(ŝ/(1-ŝ))`这类变换后再套logistic回归)。论文自己指出的
+   Platt scaling的一个具体缺陷,直接和本项目场景相关:**logistic校准族不包含恒等映射,
+   意味着如果一个分类器本来就已经校准得还不错,Platt scaling可能反而把它变得更不校准**;
+   beta calibration的参数族包含恒等映射,不会有这个"越校准越差"的风险,同时只比Platt
+   多一个参数,过拟合风险明显低于isotonic。
+
+**Part B:本项目"9-11续5"记录的实际miscalibration模式,不是单调的,这对选哪种方法有直接影响**
+
+重新看"9-11续5"test集分箱表:`[50,53)`实际命中率51.5%、`[53,58)`降到48.7%、`[58,63)`
+回升到50.3%、`[63,68)`又跳到65.6%——**这个"预测概率越高、实际命中率先降后升"的模式本身
+不是单调的**,而Platt scaling的sigmoid假设隐含"校准偏差应该是模型系统性偏高或偏低这种
+单调关系",对这种先降后升的非单调模式,参数形式再怎么拟合都拟合不出中间那个"凹陷"。这是
+这次研究里一个此前没人指出过的具体张力:**"9-11续5"提议的isotonic regression理论上能
+处理这种非单调形状,但train集只有1901场,卡在文献给出的"约1000~2000场"门槛附近偏低的
+一侧,isotonic在这个量级下过拟合风险不低**;而Platt scaling样本量安全,但函数形式本身
+可能覆盖不了"先降后升"这个已经实测观察到的真实模式。**Beta calibration作为三参数方案,
+是这次文献调研里对这个具体张力最直接的回应**——比Platt多一个自由度,理论上能容纳一部分
+非单调弯曲(beta分布的形状比单纯logistic更灵活),同时参数量仍然远低于isotonic对应的
+自由度,是样本量卡在临界点时值得优先尝试的选项。**这不代表beta calibration一定能修复
+这个"先降后升"模式**——三个参数能拟合的形状仍然有限,如果真实的非单调程度比beta calibration
+能表达的更复杂,还是需要真正测过才知道,不能只凭这次的理论分析下结论。
+
+**Part C:一个更基础的问题——诊断校准用的ECE指标本身,也有"分箱"这个自由度带来的偏差,
+"9-11续5"用的固定5个百分点宽度分箱可能低估或高估了真实校准误差**
+
+查到的通用ECE文献(Błasiok, Gopalan, Hu & Nakkiran等人的工作)指出两个和分箱直接相关的
+问题,都可以直接对上"9-11续5"那张分箱表的具体情况:
+
+1. **分箱数量本身是偏差-方差的权衡**:分箱越细,对"真实条件命中率"的估计偏差越小,但
+   每个箱子里的样本量越少、方差越大;分箱越粗则反过来。"9-11续5"的分箱表里
+   `[68,73)`这一档**n=1**,笔记原文自己也标注了"没有意义"——这不是个例外,是这类固定
+   宽度分箱在样本量不够、且confidence_prob本身集中在中间区间(现有代码限幅在
+   [20,80]/[50,80])时几乎必然出现的问题:靠近上限的箱子样本量会系统性偏少,导致那个
+   区间的"实际命中率"估计方差极大,不能直接采信,但固定宽度分箱又没有一种自然的方式去
+   反映"这个数字其实不可靠"这件事。
+2. **分箱边界本身的选择会系统性影响算出来的ECE数字**,在最坏情况下,某个分箱内部真实
+   存在的校准误差可能被平均效应完全抵消而显示不出来,而边界一变,同一份数据可能算出
+   完全不同的ECE。这意味着**"9-11续5"报告的ECE(train 4.48pp/test 4.77pp)这两个具体
+   数字,本身多少依赖于当时选定的分箱边界(50/53/58/63/68/73这组数字),换一种分箱方式
+   重算一遍,数字会变,不代表之前的定性结论(confidence_prob比基线差)会变,但这两个
+   具体百分点数字不应该被当成精确值反复引用**。
+3. **更稳健的替代方案,这次查到两类**:(a) **SmoothECE**(Błasiok & Nakkiran, ICLR
+   2024)——用核平滑(RBF kernel)代替硬分箱,得到一个不依赖分箱边界选择、且理论上
+   "一致"(consistent)的校准误差估计,有配套开源实现(`relplot`包);(b) **Bayesian
+   Binning into Quantiles(BBQ, Naeini et al.)**——不是固定选一种分箱方案,而是对多种
+   可能的分箱方案(不同的分箱数、不同的边界)做贝叶斯模型平均,用后验加权综合多个分箱方案
+   的校准估计,而不是依赖研究者手动选的某一组边界。**这两种方法这次都只查到方法概述,没有
+   拿到可以直接核实的实现细节或论文原文(见文末说明),但作为"如果以后要重新做一次更严谨的
+   校准检验,不要再用手工挑的5个百分点固定分箱"这条建议的具体候选方案,已经足够记录下来。**
+
+**Part D:关于"多少校准数据算够"这个问题,查到的数字都是经验性的、跨领域的,不是体育博彩
+专门文献给出的,需要如实说明局限**——查到的具体例子(不同研究里为了系统性研究这个问题,
+把校准集大小从32到8192按2的倍数变化)以及另一处提到"5000个点做Platt scaling是标准设置,
+1000个点是资源紧张时的下限"这类经验描述,**都来自机器学习/风险预测领域的一般性研究,没有
+一篇是体育博彩概率校准的专门文献**,和笔记里之前几节(尤其"9-11续4"Walsh & Joshi那节,
+唯一一篇是NBA体育博彩场景的)相比,这次的信息来源领域跨度更大,数字的量级可以参考,但不能
+当成体育博彩场景验证过的精确门槛。
+
+### 与本仓库数据的对应关系、接入建议(供以后决定是否做,不代下结论)
+
+1. **零成本、可以立刻做、完全复用现有数据管线**:在独立脚本里(不要改
+   `v8_backtest_pipeline.py`本身,参照"9-10续3"验证Shin方法、"9-11续5"做校准检验时
+   一贯的做法)复用`calibration_check_v8.py`已经建立的train(9/2-9/5,n=1901)/test
+   (9/6-9/9,n=2007)日期切分,**但这次校准的输入应该是`composite`这个[-1,1]的原始分数,
+   不是已经被"乘20加50、限幅在[20,80]"压缩过的`confidence_prob`**——先在train集上分别
+   拟合Platt scaling(2参数)和beta calibration(3参数)两个校准映射(样本量介于文献给出
+   的"Platt安全区"和"isotonic交叉点"之间,isotonic本次不建议作为首选,过拟合风险文献里
+   说得比较明确),在test集上分别算Brier score和ECE,和"9-11续5"已经记录的三个基线数字
+   (原始confidence_prob的0.2523、固定概率基线的0.2500)直接对比。
+2. **同一批测试顺手做的诊断**:除了固定宽度分箱的ECE,额外算一版基于分位数(而不是固定
+   百分点宽度)的分箱ECE作为交叉检验(比如按test集`confidence_prob`排序后分成5等份,
+   保证每箱样本量大致相等,不会再出现"9-11续5"里`[68,73)`那种n=1的箱子)——如果两种分箱
+   方式算出的ECE数字差别不大,说明"9-11续5"的结论对分箱选择不敏感,可信度更高;如果差别
+   明显,说明需要更谨慎地解读固定宽度分箱的具体数字。这一步不需要新工具,是纯统计计算。
+3. **中等成本、只有第1步显示校准后的Brier/ECE确实优于现有基线,才考虑做**:如果
+   Platt/beta校准后的概率显著优于"9-11续5"的两个基线,再考虑把拟合出来的校准映射系数
+   (A、B,或beta calibration的a、b、c)固化进`v8_backtest_pipeline.py`,替换掉第159-161行
+   那个手写的线性压缩公式——但要明确这组系数是在当前8天/3908场这个特定数据集上拟合出来的,
+   换一批新数据(比如新的日期范围、新增联赛)之后大概率需要重新拟合,不能一次拟合永久固定,
+   这和composite本身的line/water/euro/handicap权重(20/15/10/10)未来如果要调整时面临的
+   问题是同一类。
+4. **明确不建议做的事**:不要因为isotonic regression"理论上更灵活、能处理非单调模式"就
+   直接拿来用——train集n=1901卡在文献给出的安全门槛附近偏低的一侧,而且本项目此前已经在
+   Dixon-Coles(9-13)、confidence_prob本身(9-11续5)两处都验证过"小样本下更灵活的模型
+   容易过拟合"是真实发生过的问题,不是理论假设,isotonic regression面临的是同一类风险。
+
+### 信息来源与可靠性说明
+
+**这次会话WebFetch再次对几乎所有测试过的学术/文档域名整体拦截**(arxiv.org、
+scikit-learn.org、proceedings.mlr.press均返回`EGRESS_BLOCKED`),和"9-16""9-17""9-18"
+三次记录的限制程度一致;唯一成功直接读取原始内容(非搜索引擎摘要)的是
+`raw.githubusercontent.com/scikit-learn/scikit-learn`仓库的`calibration.rst`文档源文件,
+里面sigmoid/isotonic的公式和"CalibratedClassifierCV用交叉验证避免校准器看到拟合基础模型
+用过的数据"这部分内容是直接读到的,可信度高于本节其余部分;beta calibration的具体公式
+(三参数、`log(ŝ/(1-ŝ))`变换）、Platt/isotonic约1000~2000样本量交叉点、SmoothECE/BBQ的
+方法概述,均只经WebSearch返回的摘要交叉印证多个独立来源得到,没有一篇论文原文被直接读取,
+以后有条件访问原文时应重新核实具体公式和数字。
+
+- Platt scaling原始方法与sigmoid公式、样本量小时相对isotonic更稳健:综合多个来源交叉印证,
+  [scikit-learn calibration文档(经raw.githubusercontent.com直接读取源文件)](https://raw.githubusercontent.com/scikit-learn/scikit-learn/main/doc/modules/calibration.rst),
+  [Wikipedia Platt scaling词条](https://en.wikipedia.org/wiki/Platt_scaling),
+  [Niculescu-Mizil & Caruana, "Predicting Good Probabilities With Supervised Learning"](https://www.cs.cornell.edu/~alexn/papers/calibration.icml05.crc.rev3.pdf)
+- Kull, Silva Filho & Flach (2017), "Beta calibration: a well-founded and easily
+  implemented improvement on logistic calibration for binary classifiers", AISTATS 2017:
+  [PMLR论文页](https://proceedings.mlr.press/v54/kull17a.html)(未能直接WebFetch,
+  经WebSearch摘要获得三参数公式与"logistic校准不含恒等映射"这一核心论点)
+- 约1000~2000样本量作为Platt scaling与isotonic regression性能交叉点(多篇独立来源一致
+  给出这个量级,但没有一篇给出严格的理论推导,均为经验观察):经WebSearch摘要交叉印证多个
+  独立来源,未直接读取任何一篇原文
+- 直方分箱(histogram binning)样本复杂度随"模型可输出的不同概率值数量"线性增长、在校准
+  数据稀缺时不如Platt scaling高效:经WebSearch摘要交叉印证,未直接读取原文
+- ECE的分箱数量偏差-方差权衡、分箱边界选择对ECE数值的系统性影响:综合搜索结果摘要,核心
+  参考[Błasiok, Gopalan, Hu & Nakkiran等关于校准度量"良态性"(well-behaved-ness)的系列
+  工作](https://arxiv.org/pdf/2405.15709)(未能直接WebFetch)
+- Błasiok & Nakkiran (2024), "Smooth ECE: Principled Reliability Diagrams via Kernel
+  Smoothing", ICLR 2024:[arXiv 2309.12236](https://arxiv.org/abs/2309.12236),
+  [OpenReview](https://openreview.net/forum?id=XwiA1nDahv)(均未能直接WebFetch,方法
+  概述——RBF核平滑、`relplot`开源实现——经WebSearch摘要获得)
+- Naeini, Cooper & Hauskrecht, "Obtaining Well Calibrated Probabilities Using Bayesian
+  Binning"(BBQ,对多种分箱方案做贝叶斯模型平均):[dbmi.pitt.edu PDF链接](https://www.dbmi.pitt.edu/wp-content/uploads/2022/10/Obtaining-well-calibrated-probabilities-using-Bayesian-binning.pdf)
+  (未能直接WebFetch,仅经WebSearch摘要获得方法概述,未核实具体的模型平均公式)
+
+**方法论诚实说明**:这次和"9-16"到"9-18"几节记录的情况一致,几乎全部具体数字(尤其
+"约1000~2000样本量交叉点""32到8192按2倍数变化"这类量化描述)都来自跨领域(机器学习/
+医疗风险预测)的一般性文献,不是体育博彩专门场景验证过的门槛,而且没有一篇被直接读取原文——
+"接入建议"第1条给出的做法(在独立脚本里用已有数据实测Platt/beta校准后的Brier/ECE,直接
+和现有基线数字比较)本身不依赖这些外部数字是否精确,是用本项目自己的数据说话,这是本节
+最应该被信任、也是接下来如果要推进这个方向应该优先做的部分,而不是先假设某个校准方法
+"理论上应该更好"。
+
+---
