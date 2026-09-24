@@ -2890,3 +2890,208 @@ McHale & Scarf"条件相关转正"这条本节最关键的修正性发现,同样
 描述。**
 
 ---
+
+## 2026-09-24 去水方法补全:Power method(乘幂法)在两边市场(大小球水位)与三边市场(胜平负)上为什么可能不是同一件事
+
+### 动机
+
+"9-10续3"已经把Shin's method和现有的乘法去水(multiplicative,即`v8_backtest_pipeline.py`
+里`implied_prob_pair()`那种"1/odds再归一化")在n=3908的8天数据集上真刀真枪对比过
+(`test_shin_devig.py`),结论是Shin没赢:train 52.45% vs 51.76%,test 50.52% vs
+49.68%,方向一致但McNemar不显著(p≈0.23)。但这次测试只覆盖了"乘法 vs Shin"这一对,
+业内和学术界常提的第三种主流去水法——power method(乘幂法,Buchdahl在《Wisdom of the
+Crowd》里称之为logarithmic method)——在全部2892行笔记里一次也没出现过,是"9-10到9-23"
+去水方法这条线索里唯一还没测过的经典方法,也是这次任务选定深入研究的方向。
+
+### Power method的精确定义(已用`raw.githubusercontent.com`直接读取源码原文确认,非摘要转述)
+
+以`opisthokonta/implied`(R包`implied`的开发仓库,CRAN收录版本的原始出处,Jonas
+Christoffer Lindstrøm维护)的`R/implied_probabilities.R`源码为准:
+
+- 记原始隐含概率(未去水)`r_i = 1/odds_i`(对本项目而言,`odds_i = 1 + water_i`,即
+  香港水位加1还原成小数赔率)。
+- Power method求一个指数`n`,使得`sum(r_i^(1/n)) = 目标概率和`(默认目标=1),即
+  `p_i = r_i^(1/n)`。
+- 求解用`uniroot`(R自带的单变量求根),搜索区间是`n ∈ [0.0001, 1]`——目标函数
+  `f(n) = sum(r_i^(1/n)) - target`在这个区间内单调,可以直接二分或用
+  `scipy.optimize.brentq`替代(Python没有`uniroot`,但`brentq`是等价的括号法求根器)。
+  这和"9-10续3"里`shin`包内部同样用求根法(`shin_method='uniroot'`或迭代法'js')解出
+  内幕交易比例`z`是同一类数值方法,复杂度相当,不需要新引入超出`scipy`范围的依赖。
+- 对照:odds ratio method(`implied`包里的`'or'`)公式是`p_i = r_i/(OR + r_i - OR*r_i)`,
+  同样用`uniroot`求`OR`(区间`[0.95, 5]`),这是Cheung提出的第三种常见去水法,这次没有
+  深入研究,只作为"power method之外还有的第三条路"记录在案,以后如果power method验证
+  后仍不够,odds ratio method是下一个可以试的候选。
+- CRAN vignette(同样直接WebFetch到`cran.r-project.org`的HTML页面成功抓取,这次该域名
+  没被拦截)额外给出的等价写法:`p_i = r_i^(1/k)`(vignette里的`k`就是源码里的`n`),并
+  明确说"基础方法(basic/multiplicative)往往是几种方法里最不准的一个",与本项目"9-10续3"
+  实测乘法法仍然打赢Shin的结果不矛盾——vignette这句话是"乘法法对favourite-longshot
+  bias没有任何修正、理论上该是最差的"这个一般性论断,不代表在任何具体数据集上乘法法一定
+  输给别的方法,和power method是否在本项目数据上会赢是两个独立的问题,不能直接当结论用。
+
+### 关键的新证据:power method和Shin的"适用市场类型"可能本来就不一样
+
+这是这次研究里对"为什么Shin没测出优势"最有解释力的一条线索,但需要注意它的可信度分层
+(见下面"方法论诚实说明")——多个博彩数据/工具类站点(Bet Hero、Outlier.bet帮助文档,均
+经WebSearch摘要获取,**这次没能绕过代理直接读取原文核实**)反复给出同一个模式:
+
+1. **两边市场(two-outcome,比如本项目的大小球Over/Under、让球胜负、美式点差盘)**:
+   "对多数两边市场(NFL让分、NBA大小球、网球),power method是最常用的默认选择,因为它
+   能在不过度修正的前提下处理favourite-longshot bias";并且有一条更具体的数学论断——
+   **"对只有两个结果的市场,Shin's method在数学上基本等价于additive method(等额去水)"**。
+   如果这条成立,那么"9-10续3"里`water_sig`(大小球Over/Under,两边市场)那次Shin测试,
+   本质上测的是"等额去水 vs 乘法去水"这一对,而不是"power method代表的favourite-longshot
+   bias修正 vs 乘法去水"——**这意味着"9-10续3"的负面结果不能直接推广到"power method在
+   两边市场上也没用",因为两者虽然都属于"非乘法去水法",但behind the math不是同一族修正**。
+2. **三边市场(比如本项目`euro_sig`用到的胜平负1X2)**:同一批来源认为"三边市场(如足球
+   1X2)更适合用multiplicative或power method,因为'平局'不像传统的longshot那样表现,
+   Shin的模型假设不太适用"。这和"9-10续3"里`euro_sig`(平局代理,三边市场)那次Shin
+   同样没测出优势,方向上是吻合的——**Shin的"内幕交易者"假设本来就是为"清晰的热门/冷门"
+   二元结构设计的(1993年原始论文场景是赛马),胜负平里的"平局"不是传统意义上的冷门,
+   用Shin处理平局本来就缺乏理论依据,这解释了"9-10续3"平局代理那次为什么Shin也没赢**。
+
+**重要限制**:上面两条判断目前只到"多个二手工具站点摘要相互印证"这一层,没能找到可以
+直接WebFetch核实的学术原始文献把"两边市场下Shin≈additive"这个数学断言写成公式并证明
+(Shin原始1993年论文、Buchdahl原始PDF这次都被代理拦截,见"方法论诚实说明")。这条线索
+的价值是**给了一个可检验的假设("power method在两边市场上应该比Shin更有希望跑出增量"),
+不是可以直接当结论使用的定论**。
+
+### 更大规模的最新学术证据(2026年新论文,同样只到WebSearch摘要级别)
+
+WebSearch找到一篇2026年的新论文《Forecast Sports Outcomes under Efficient Market
+Hypothesis: Theoretical and Experimental Analysis of Odds-Only and Generalised Linear
+Models》(arXiv 2604.17194,**这次`arxiv.org`全站被代理拦截,包括`/abs/`、`/pdf/`、
+`/html/`路径,以及尝试的两个第三方论文镜像站`pith.science`、`awesomepapers.io`也都被
+拦截,以下内容完全是WebSearch自带摘要,没有任何一处核实到原文**):
+
+- 用football-data.co.uk上2012-2024赛季、5家博彩公司(Bet365、Bet&Win、Interwetten、
+  Pinnacle、William Hill)、共90014场比赛的赔率数据做实证。
+- 提出一个"favourite-longshot-bias-adjusted GLM"(FL-GLM),只用一个参数捕捉
+  favourite-longshot bias,在全部5家公司数据上都跑赢现有的multinomial/ordered logistic
+  GLM。
+- **数学上关键的一句话**:"multiplicative conversion和power conversion在FL-GLM的参数
+  取到某个特定条件时是等价的"——如果这句摘要转述准确,意味着power method和乘法法在这篇
+  论文的框架里被统一成同一个参数族的两个特例,而不是两个无关的方法,这对"该不该单独测
+  power method"这个问题有点微妙的影响:**如果两者本就是同一个参数族里的一个连续谱,那么
+  "在本项目8天数据上乘法法暂时打赢Shin"这件事,并不能排除"谱上稍微偏离乘法法一点的某个
+  power method参数"反而更好这种可能性——这恰恰是power method"求解一个连续指数n"而不是
+  "二选一"的意义所在**。
+- 这篇论文摘要提到"favourite-longshot bias对'平局'比对'胜负'这类决定性结果更弱",与上一
+  段"三边市场平局不适合用Shin"的说法是同一个方向的独立佐证,但同样没能读到具体数字。
+- **这篇论文没有任何关于大小球/总进球(over/under、totals)市场的内容**——摘要看到的全部
+  实证都是围绕1X2/让球这类"谁赢"的市场,**不能假设它的结论直接适用于本项目的O/U市场**,
+  这是这次研究里必须明确标注的边界,不能过度引申。
+
+### Štrumbelj (2014) ——被反复引用但这次也没能读到原文的一篇基础文献
+
+《On determining probability forecasts from betting odds》,*International Journal of
+Forecasting* 30(4), 934-943——这篇文献被"implied方法论"这类综述性文章反复引用为
+"basic/Shin/回归模型三者预测准确度对比"的方法论出处。WebSearch摘要给出的结论方向是
+"Shin's method预测准确度优于basic normalization和回归模型",且"不同去水法算出的概率
+差异大到足以导致相互矛盾的结论"。**这篇没有涉及power method**,只是作为"不同去水法真的
+会导致不同结论"这个大前提的佐证放在这里,提醒以后任何去水法对比研究都要意识到"用哪种
+去水法本身就是一个会改变实证结果的建模选择,不是无关紧要的预处理步骤"。
+
+### 现成的Python实现:不需要新写求根代码
+
+`raw.githubusercontent.com/cswaters/pyimpliedodds/main/README.md`(已直接WebFetch核实
+原文,该域名这次没被拦截)显示存在一个可以`pip install pyimplied`装的库,是R包`implied`
+的Python移植版,**明确列出了`POWER`方法**(以及`BASIC`/`WPO`/`BB`/`ADDITIVE`/`SHIN`/
+`OR`/`JSD`/`PROBIT`共9种),用法示例:
+
+```python
+from pyimplied import implied_probabilities, Method
+probs = implied_probabilities(odds, method=Method.POWER)
+```
+
+这意味着做"power method vs 乘法法"的对比测试,**不需要像`test_shin_devig.py`当初手写
+`shin`包那样从头接入一个新的去水库**——如果`pyimplied`能正常`pip install`(这次没有
+实际验证包的可安装性和数值正确性,只核实了README描述,这是以后动手写测试脚本时第一步
+要确认的事),可以直接复用其`POWER`方法;如果装不上或数值对不上,退路是照抄"Power
+method的精确定义"一节给出的`r_i^(1/n)`公式,用`scipy.optimize.brentq`在`(0.0001, 1]`
+区间上手写几行等价实现,复杂度和`test_shin_devig.py`里已经写过的Shin对接代码类似。
+
+### 与本仓库/`v8_backtest_pipeline.py`的对应关系、接入建议(未执行,供以后决定是否做)
+
+1. **零新增数据字段**:power method的输入和"9-10续3"测Shin时完全一样——`water_sig`
+   需要的`open_over`/`open_under`/`live_over`/`live_under`(大小球香港水位,已在
+   `ou_by_match`里),`euro_sig`需要的主胜/平/客胜三边欧赔(`test_shin_devig.py`里
+   `eu_full`已经从原始sheet里把`load_workbook_data()`丢弃的home/away赔率补读出来了,
+   直接复用那段代码)。**不需要`nowgoal_collect.py`采集任何新字段**,是这次任务清单里
+   除"9-23"CMP诊断之外,又一个"纯粹用已有数据换一种算法"、不涉及采集缺口的方向。
+2. **建议的验证方式**:照抄`test_shin_devig.py`的结构(同一份`Nowgoal_2026-09-02_至
+   _2026-09-09`8天/n≈3908数据集,同样的按日期先后切train/test,同样的McNemar检验),
+   把`shin_pair()`/`shin_draw_prob()`换成基于上面`r_i^(1/n)`公式的power版本,同时跑
+   三个候选(乘法法基线、Shin、power)而不是只对比两个,这样可以直接检验上一节"power
+   method和Shin可能不是同一族修正"这个假设是否在本项目数据上成立——**如果power method
+   同样跑不赢乘法法,说明"9-10续3"的负面结果不是Shin这一种具体实现的问题,而是这批数据
+   上大小球水位漂移本身对favourite-longshot式修正不敏感;如果power method跑赢了乘法法
+   而Shin没有,则印证了"两边市场应该用power而非Shin"这个假设,后续可以考虑把`euro_sig`
+   保留乘法/power二选一、`water_sig`换成power method**。
+3. **样本量提醒(呼应"9-16"关于多重比较的结论)**:这次一旦加入power method,连同已经
+   测过的乘法法、Shin,就是同一个`water_sig`/`euro_sig`定义上的第三次独立试验,按
+   "9-16"的建议,应该把这次测试也记入"待创建但至今没创建"的`trials_log.json`(见"9-16"
+   末尾遗留项),并且如果三种去水法在同一份8天数据上一起比较,统计推断时要按"三选一"而
+   不是"二选一"调整显著性阈值(简单可以用Bonferroni,三个比较用α/3),不能因为多测了
+   一种方法就更容易找到"看起来赢了"的那一个。
+4. **不建议做的事**:不要仅凭这次查到的"两边市场更适合power method"这条二手摘要级证据
+   就直接把`water_sig`的去水方式换成power method并上线——这条证据本身信度不高(见下面
+   "方法论诚实说明"),必须先按第2条在离线数据上实测出正向结果,而且样本量要达到"9-16"
+   反复强调的门槛(检测~2%级别的edge大约需要50轮×7个市场量级的样本),不能像"9-10续3"
+   那样方向一致但p≈0.23就直接采信。
+
+### 方法论诚实说明
+
+这次`cran.r-project.org`(CRAN网站本身,含vignette HTML页面)、
+`raw.githubusercontent.com/opisthokonta/implied/...`、
+`raw.githubusercontent.com/cswaters/pyimpliedodds/...`三个来源是**直接WebFetch读取原文
+成功**的,是本节里可信度最高的部分(power method的精确公式、求根区间、`pyimplied`库的
+存在和方法列表)。但`www.football-data.co.uk`(Buchdahl原始"Wisdom of the Crowd" PDF、
+以及"Revisiting the Favourite-Longshot Bias"博文)、`arxiv.org`全站(含FL-GLM论文本体
+和两个第三方镜像站)、`www.rdocumentation.org`这次全部返回`EGRESS_BLOCKED`,和"9-16"到
+"9-23"反复记录的同一种环境限制一致。因此本节里**"两边市场Shin≈additive、更适合power
+method""三边市场平局不适合Shin"这两条对解释"9-10续3"负面结果最有价值的论断,以及FL-GLM
+论文"power与乘法法在特定参数下等价"这条数学事实,目前都只到WebSearch自动摘要这一层,
+没有任何一处是本次会话亲自读到原文验证过的**——摘要之间虽然相互印证(Bet Hero、
+Outlier.bet两个独立信源说法一致),但都是博彩工具类网站的二手转述,不是学术原始文献,
+以后如果要把这些论断当作实现power method的理论依据写进正式模型说明,应该优先设法找到
+Shin(1993)原始论文或Buchdahl《Wisdom of the Crowd》PDF原文核实"两边市场下Shin数学上
+退化为additive"这个具体断言,而不是止步于这次的摘要级证据。本节的核心可交付结论,应该
+是"power method是一个有精确公式、有现成Python实现、不需要新数据、值得补测的第三种去水
+法",而不是"power method理论上一定比Shin更适合大小球市场"这个目前证据还不够硬的推论。
+
+### 信息来源
+
+- `opisthokonta/implied` R包源码(**直接WebFetch读取`raw.githubusercontent.com`原始
+  文件,非摘要**):power method公式`io^(1/n)`、求根区间`[0.0001, 1]`、odds ratio method
+  公式`io/(c+io-c*io)`及求根区间`[0.95, 5]`、Shin method公式与两种求解算法(`'js'`迭代/
+  `'uniroot'`直接求根):
+  [github.com/opisthokonta/implied](https://github.com/opisthokonta/implied),
+  [R/implied_probabilities.R](https://raw.githubusercontent.com/opisthokonta/implied/master/R/implied_probabilities.R)
+- `implied`包CRAN vignette"Introduction to the implied package"(**直接WebFetch读取
+  `cran.r-project.org`原文成功**):basic/WPO/odds ratio/power/additive/Shin/balanced
+  books/JSD/OO-EPC共9种方法的公式与简介,power method来源标注为Buchdahl《Wisdom of the
+  Crowd》,"basic method往往是几种方法里最不准的"这一判断的原始出处:
+  [cran.r-project.org/web/packages/implied/vignettes/introduction.html](https://cran.r-project.org/web/packages/implied/vignettes/introduction.html)
+- `cswaters/pyimpliedodds`(**直接WebFetch读取`raw.githubusercontent.com`原文成功**):
+  Python版`pip install pyimplied`,9种去水/加水方法含`Method.POWER`,示例用法:
+  [github.com/cswaters/pyimpliedodds](https://github.com/cswaters/pyimpliedodds)
+- Bet Hero博客"Devigging Methods: Power, Shin, Additive, Multiplicative"、Outlier.bet
+  帮助文档"How to Devig Odds - Comparing the Methods"(**均只经WebSearch摘要获取,原文
+  这次未能直接WebFetch核实**):"两边市场Shin基本等价additive""两边市场power method是
+  常见默认选择""三边市场平局不适合Shin"等论断的来源,可信度分层见上"方法论诚实说明":
+  [help.outlier.bet/.../8208129-how-to-devig-odds-comparing-the-methods](https://help.outlier.bet/en/articles/8208129-how-to-devig-odds-comparing-the-methods),
+  [betherosports.com/blog/devigging-methods-explained](https://betherosports.com/blog/devigging-methods-explained)
+- 《Forecast Sports Outcomes under Efficient Market Hypothesis: Theoretical and
+  Experimental Analysis of Odds-Only and Generalised Linear Models》,arXiv
+  2604.17194,2026年论文(**`arxiv.org`及两个第三方镜像`pith.science`/
+  `awesomepapers.io`均被拦截,以下仅WebSearch摘要,未读到原文**):90014场比赛/5家
+  公司(2012-2024赛季)实证、FL-GLM单参数模型、"power与multiplicative在特定参数下等价"
+  这条数学事实、"favourite-longshot bias对平局弱于对胜负结果"的发现,**不含O/U市场
+  内容**:[arxiv.org/abs/2604.17194](https://arxiv.org/abs/2604.17194)
+- Štrumbelj, E. (2014), "On determining probability forecasts from betting odds",
+  *International Journal of Forecasting*, 30(4), 934-943(**仅WebSearch摘要,原文
+  未核实**):"不同去水法算出的概率差异足以导致矛盾结论"这一方法论前提的学术出处,
+  不含power method:
+  [sciencedirect.com/science/article/abs/pii/S0169207014000533](https://www.sciencedirect.com/science/article/abs/pii/S0169207014000533)
+
+---
