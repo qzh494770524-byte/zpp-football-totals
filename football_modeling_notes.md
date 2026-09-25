@@ -3095,3 +3095,199 @@ Shin(1993)原始论文或Buchdahl《Wisdom of the Crowd》PDF原文核实"两边
   [sciencedirect.com/science/article/abs/pii/S0169207014000533](https://www.sciencedirect.com/science/article/abs/pii/S0169207014000533)
 
 ---
+
+## 2026-09-25 比赛"还有没有价值"(match stakes/motivation)对大小球的影响:一个笔记从未覆盖、且和已知的K联赛分组缺口同源的方向
+
+### 为什么研究这个
+
+先通读了全部15节笔记(2026-09-10到2026-09-24)确认覆盖范围:任务清单列的六个方向(Dixon-Coles
+实现细节、联赛进球基准、公众下注偏好、xG方法论、去水换算、样本量/sharp money)全部至少被
+系统研究过一轮,继续在这几条上找子话题边际收益已经很低。用
+`grep -E "动机|dead rubber|保级|争冠|无欲无求|友谊赛|裁判|天气|轮换阵容|密集赛程"` 扫了全文,
+唯一命中的是"K联赛赛季中段分成冠军组/保级组两个不同对手池"(9-11续3、9-13两节记录的Dixon-Coles
+实现缺口#3)——**这个分组现象本身此前只被当作"拟合时的结构性麻烦"记录,从未有人问过"为什么
+K联赛要分组""这背后对应的机制是不是本身就该拿来当大小球信号用"**。这是一个笔记里明确存在坐标
+（K联赛分组）但从未展开的方向,也直接对应任务里"公众下注偏好/庄家定价行为"这一类但换了一个从未
+问过的角度:不是"公众怎么押注",而是"球队自己在没有晋级/保级压力时怎么踢",这决定了真实进球
+分布,理论上应该比"下注量"更早、更直接影响总进球。
+
+读代码进一步确认这不只是文献缺口,也是代码里确实存在、和"9-10""9-14""9-18"三节发现的模式
+完全一样的"字段解析出来但被丢弃"问题:`_parse_standings_table()`
+(v8_backtest_pipeline.py 第216-218行)
+
+```python
+matches_, win, draw, lose, scored, conceded, pts, rank, rate = [_strip_tags(x) for x in tds[1:10]]
+stats[label] = dict(matches=int(matches_), scored=int(scored), conceded=int(conceded),
+                     rank=(int(rank) if rank.strip() else None))
+```
+
+**h2h页面的Standings表格里,`win`/`draw`/`lose`/`pts`(当前积分)/`rate`(胜率)五个字段被解析
+出来后直接丢弃,只有`rank`(名次)被存进`stats[label]`,而`compute_expected_goals()`
+(第235-260行)只读`scored`/`conceded`/`matches`三个字段算进失球率,`rank`本身也从未被
+下游使用过。** 这意味着"这支球队现在联赛排第几、有多少积分"这类和"是否还有直接的晋级/保级
+压力"高度相关的信息,其实已经在抓取阶段被拿到手了,只是和`league`字段(9-14发现)、
+`cid`/`cname`(9-10发现)、`open_aw`/`last_aw`(9-18发现)一样,进了代码却从未被使用——
+这是本项目第四次发现同一类问题,值得以后做一次专门的"哪些字段解析了但没用上"的代码审计,
+而不是每次研究撞见一个才顺手记一次。
+
+### 查到的文献:两种机制方向相反,必须分开看,不能一概而论"没有价值的比赛=大球"
+
+**Part A:联赛赛季末"没有直接利害关系"(mid-table safety,非淘汰赛/非杯赛)——双方进球都涨,
+不是净胜球下降那么简单**
+
+- Jonathan Liew(《每日电讯报》2014年分析,数据博客Expecting Goals/Analytics FC近期
+  重新核实过同一现象,可信度分层见下):统计2010-11至2013-14赛季英超**76场**至少一方
+  "已经没有直接晋级欧战、也没有降级风险"的比赛,发现**进球数和失球数同时上升**,只是失球
+  涨得比进球更多、净胜球因此变差——这个方向很关键:**不是"没有动力=踢得敷衍=总进球变少",
+  而是"防守动力消失但双方仍然全力比赛=总进球两头都涨"**。
+- Analytics FC(2024年更新研究,用更近的赛季数据重新验证同一效应):把范围界定为"赛季最后
+  约2.2轮比赛、双方都已经没有明确目标(既不可能保级失败也进不了欧战)"的场次,量化到**进球
+  +0.26球/90分钟、失球+0.27球/90分钟**(数字经WebSearch摘要交叉印证获得,原始域名
+  expectinggoals.com/analyticsfc.co.uk均被当前环境代理拦截,未能直接WebFetch核实,量级
+  可信但精确到小数点后两位的数字应视为近似值),对应xG差从**-0.14/90恶化到-0.26/90**——
+  用xG而不只是进球数佐证了"是防守质量真的下降(让出更多高质量机会),不是单纯运气",这条
+  证据链本身相对扎实。**换算成本项目关心的"总进球"口径:双方进球都涨意味着这类比赛的总进球
+  期望值明显高于常规比赛,是直接可以映射到大小球"大"方向的效应,而不是像"公众压大偏好"
+  (9-12节)那样只是下注量层面的现象。**
+
+**Part B:相反机制——杯赛淘汰赛/分组赛已定局的"死场"(dead rubber),常见的是轮换阵容/
+消极比赛,可能反而压低总进球**
+
+- 多个博彩教学类网站(7bet.co.uk、goal.com,可信度中等、非学术来源,只作方向性参考)
+  一致描述:淘汰赛/小组赛已经提前出线或提前出局的场次,球队常见做法是**轮换主力、放弃全力
+  争胜**,这种"死场"的进球产出逻辑和Part A的联赛保级/争冠中段完全不同——不是"防守动力
+  消失、进攻照常甚至更放松地进攻",而是**双方都可能降低整体强度**,对总进球的方向性影响
+  不确定,甚至可能偏低(尤其是被雪藏的主力阵容影响进攻端时)。
+- Rohde & Breuer (2017, *International Journal of Sport Finance*所属期刊/SAGE)研究
+  德甲球队在欧战附加赛程密集时的首发阵容轮换与财务激励的关系,以及Kazachkov & Vardi (2020)
+  关于"tanking"和赛制设计的博弈论分析(均经WebSearch摘要获得,原文未核实),两者共同指向
+  **"没有价值的比赛"这个大类下面至少要区分两种子情形**:(a) 联赛赛季中段"安全区间"的
+  常规轮次比赛(双方都还要踢满赛程,只是这一场输赢不再影响最终名次)——对应Part A,进球
+  两头涨;(b) 杯赛/多阶段赛制里已经数学上锁定晋级或淘汰结果的场次——对应轮换/摆烂,进球
+  方向不确定。**这两种"没有价值"在本项目实际数据里都可能出现(K联赛冠军组/保级组分组前
+  的边缘场次接近(a)类;而本项目还覆盖的一些国际青年队邀请赛、附加赛性质赛事更接近(b)类),
+  混在一起当同一个信号处理会自相抵消。**
+
+**Part C:学术论文的独立佐证——"比赛重要性"作为预测变量能带来真实的市场无效率,不是博客
+臆测**
+
+Goddard, J. & Asimakopoulos, I. (2004), "Forecasting football results and the efficiency
+of fixed-odds betting", *Journal of Forecasting*, 23(1), 51-66:用**10年英格兰联赛数据**
+拟合有序probit模型预测比赛结果(1X2,不是O/U),**显式把"这场比赛对赛季末排名的重要性"
+(match significance for end-of-season league outcome)、球队是否同时在打杯赛、两队主场
+距离**作为自变量放进模型,发现**针对赛季末比赛、按模型算出正期望值的场次去下注,能产生正
+回报**——这是笔记目前查到的、把"比赛重要性"正式当成一个预测变量、并且真的在赛前赔率市场上
+测出了统计意义上的无效率的学术文献,不是营销类网站的话术(这一点和"9-18"节点名批评过的
+"陷阱盘"从业者话术形成对照:trap game缺乏可核实的学术支撑,而"比赛重要性影响定价效率"
+这条有)。**需要如实说明:这篇论文验证的是1X2结果市场的效率,不是O/U大小球市场,不能直接
+把"赛季末比赛有正期望值"这个结论套到大小球方向上,只能作为"比赛重要性是一个被学术界验证过、
+确实能带来市场无效率的变量类别"这一更抽象论断的证据。**
+
+**Part D:一个必须一起看的反例——改变积分激励结构本身,不必然改变进球数量**
+
+"Incentives matter sometimes: On the differences between league and Cup football
+matches"(*Journal of Behavioral and Experimental Economics*系列/frontiersin关联研究,
+用爱尔兰联赛League of Ireland历史数据,经WebSearch摘要获得,ScienceDirect/frontiersin.org
+原文均被当前环境代理拦截未能核实)研究了1980-90年代爱尔兰联赛"胜3分制"改革(把平局的相对
+吸引力降低、鼓励球队追求胜利而非战平)对比赛的影响,**结论是这几次积分规则改革没有一次
+真正带来进球数量的提升**。这条证据提醒:**"改变球队的激励结构"和"比赛本身还有没有直接
+利害关系"是两件不同的事**——Part A/B讨论的是"这场比赛结果是否还影响赛季目标"这个二元
+状态,Part D讨论的是"赢球本身值多少分"这个连续变量,两者不能混为一谈,不能因为Part D的
+"变了规则不涨球"就反过来怀疑Part A的"没有直接利害关系时进球会涨"这条证据——它们回答的
+不是同一个问题。
+
+### 与本仓库数据的对应关系:接入前的数据缺口(比想象中小,但仍不完整)
+
+好消息是h2h页面的Standings表格**已经把`pts`(当前积分)和`rank`(名次)解析出来了**
+(第216-218行),`pts`目前被丢弃、`rank`被存了但没用,这比"9-14"发现的联赛场均进球基准
+(完全没有采集渠道、需要外部查表)成本低得多——不需要新增抓取,只需要把已经在内存里的字段
+存下来。但要真正判断"这场比赛对两队是否还有直接利害关系",光有单场排名/积分快照仍然不够,
+还缺:
+
+1. **赛季还剩多少轮**:h2h页面的Standings板块目前只解析Total/Home/Away/Last 6四行汇总,
+   没有解析联赛总轮次或赛程表,无法判断"现在积分差距在剩余轮次下是否还可能改变晋级/降级
+   结果"这个关键条件——Part A的效应是"最后约2.2轮"才明显,不是整个赛季后半段都成立,不知道
+   剩余轮次就没法判断当前比赛是否落在这个窗口里。
+2. **降级区/欧战区的具体分数线**:`rank`只是名次,不直接等于"距离降级区/欧战区还差多少分"
+   ——降级区通常是联赛倒数第3名前后(不同联赛队数不同),需要知道该联赛参赛队数和赛制规则
+   才能从名次换算出"安全边际",这是联赛级别的元数据,现有代码完全没有维护。
+3. **比赛类型(联赛常规轮次 / 杯赛淘汰赛 / 分组已定局的多阶段赛事)**:Part A/B的机制方向
+   相反,必须先能区分这场比赛属于哪一类,但现有`matches`字典里只有`league`这个联赛名称
+   字符串,没有结构化的"赛事阶段"字段,而且本项目覆盖的不少赛事本身就是国际邀请赛/资格赛
+   性质(青年队邀请赛、附加赛),连"这是联赛还是杯赛"都可能需要额外判断规则,不是查一张
+   静态表就能完成。
+
+**接入建议(供以后决定是否做,分层,不代下结论):**
+
+1. **零成本、可以立刻做,纯数据管道修复**:参照"9-14"处理`league`字段、"9-18"处理
+   `open_aw`/`last_aw`的方式,把`_parse_standings_table()`里已经解析出来但丢弃的`pts`
+   存进`stats[label]`,不改变现有`compute_expected_goals()`的计算逻辑,只是不再浪费已经
+   到手的数据。
+2. **低成本、独立离线脚本、不改v8主逻辑**:先只做一件事——统计现有历史数据集(8天/3908场
+   或更大样本)里,`rank`/`pts`这两个字段实际的覆盖率和取值分布(有多少场次两队都有有效
+   排名/积分、青年队/邀请赛类比赛里这两个字段是不是经常缺失)。这一步不需要判断"比赛是否
+   还有价值"这个更复杂的问题,只是确认"数据本身够不够用"——如果连排名/积分的覆盖率都很低
+   (青年队/邀请赛类比赛很可能没有联赛积分榜可言),后面的假设根本无从检验,应该先做这一步
+   再决定要不要往下投入。
+3. **中等成本、需要额外补充联赛元数据(队数、赛制、赛季总轮次)才能做**:如果第2步显示
+   排名/积分覆盖率可观,再考虑对覆盖率最高的1-2个常规联赛(不是青年队邀请赛类),手工维护
+   一张"联赛→参赛队数→大致降级区名次范围→常规赛季总轮次"的小表,据此判断"当前比赛日期
+   对应第几轮、两队积分差距在剩余轮次下是否还可能变动排名结果",构造一个独立于`compute_
+   odds_drift_signal()`的新特征(比如"双方都处于安全区间"的布尔标记),离线和历史盘口
+   漂移预测的命中率/Brier score对照,而不是直接假设它有用就加进composite。
+4. **明确不建议做的事**:不要把Part A(联赛赛季末安全区间)和Part B(杯赛死场轮换)两种
+   机制混在一起当成同一个"无所谓的比赛"信号——本项目历史数据里同时有常规联赛、K联赛冠军组/
+   保级组、国际青年队邀请赛、卡塔尔/乌兹别克联赛这类不同赛制的赛事,不先区分比赛类型就直接
+   套用"没有直接利害关系=大球"这个结论,大概率会把两种方向相反的效应混在一起互相抵消,
+   得到一个测不出信号的假阴性结果,而误判为"这条路不通"。
+5. **和已知发现的直接呼应**:这条研究结果也回过头解释了"9-11续3""9-13"两节记录的K联赛
+   冠军组/保级组分组为什么会造成Dixon-Coles拟合的结构性断裂——**联赛官方把赛季后半段
+   人为分成两个对手池,本质上就是为了避免出现大量"两队都没有直接利害关系"的比赛,这本身就是
+   联赛设计者也认可"没有利害关系的比赛,球队真实表现和有利害关系时不一样"这个机制真实存在
+   的间接证据**,不只是一个需要在建模时绕开的技术麻烦。
+
+### 信息来源与可靠性说明
+
+本次会话再次遇到"9-12"到"9-24"反复记录的同一种环境限制:`www.expectinggoals.com`、
+`analyticsfc.co.uk`、`www.sciencedirect.com`、`www.frontiersin.org`、`r.jina.ai`
+(尝试用作代理镜像绕过前几个域名的拦截,同样被拦截)、`previsaosimples.pbworks.com`
+全部返回`EGRESS_BLOCKED`,本节全部文献结论均只经WebSearch自动摘要获得,**没有一篇原文
+被直接读取**,数字(76场、+0.26/+0.27球每90分钟、xG差-0.14到-0.26)应视为"方向和量级
+经多个独立来源交叉印证、可信,但精确数值以后有条件访问原文时需要重新核实",Goddard &
+Asimakopoulos (2004)这篇发表期刊论文的存在和核心方法(比赛重要性作为probit模型自变量、
+针对赛季末比赛的策略产生正回报)经多个学术索引站点(Wiley、ResearchGate、Bangor
+University机构库、Semantic Scholar)独立列出交叉印证,可信度高于纯博客类来源,但同样
+未能直接WebFetch读取全文核实具体回报率数字。代码层面的发现(`pts`/`win`/`draw`/`lose`/
+`rate`被解析后丢弃、`rank`存了但未使用)是直接读取`v8_backtest_pipeline.py`源码验证过的,
+可信度和文献部分不同,是本节最有把握的部分。
+
+- Jonathan Liew(2014),《每日电讯报》对英超2010-11至2013-14赛季76场"无直接利害关系"
+  比赛的进球/失球统计分析,经Expecting Goals与Analytics FC两个数据博客重新引用交叉印证
+  (原始Telegraph文章链接未直接查到,经二手转述获得):
+  [Expecting Goals: What Happens When Teams Have "Nothing to Play For"](https://www.expectinggoals.com/p/what-happens-when-teams-have-nothing),
+  [Analytics FC: When Teams Have Nothing To Play For](https://analyticsfc.co.uk/blog/2024/04/16/when-teams-have-nothing-to-play-for/)
+- Analytics FC (2024)"最后约2.2轮无目标比赛"进球/失球/xG差量化更新研究:同上Analytics FC
+  链接(域名被当前环境代理拦截,数字经WebSearch摘要获得,未直接WebFetch核实)
+- Goddard, J. & Asimakopoulos, I. (2004), "Forecasting football results and the
+  efficiency of fixed-odds betting." *Journal of Forecasting*, 23(1), 51-66:
+  [Wiley Online Library](https://onlinelibrary.wiley.com/doi/10.1002/for.877),
+  [Bangor University机构库](https://research.bangor.ac.uk/en/publications/forecasting-football-match-results-and-the-efficiency-of-fixed-od/),
+  [Semantic Scholar](https://www.semanticscholar.org/paper/Forecasting-football-results-and-the-efficiency-of-Goddard-Asimakopoulos/77d4d54ead5d2855a96a29d608d4fa5c775a5f31)
+  ——均未能直接WebFetch核实全文,方法与结论经多个索引站点摘要交叉印证。
+- "陷阱盘"式营销类来源(可信度中等,仅作Part B方向性参考,不引用具体数字):
+  [7bet.co.uk: What Is a Dead Rubber Match and How Does It Impact Football Odds?](https://7bet.co.uk/blog/what-is-a-dead-rubber-match-and-how-does-it-impact-football-odds/),
+  [Goal.com: How to find value in dead rubber games for teams in the Big 5 leagues](https://www.goal.com/en-us/betting/opinion/value-in-dead-rubber-games-big-5-leagues/A%3Ablt6c2cca8eb23cc475)
+- Rohde, M. & Breuer, C. (2017)德甲球队财务激励与首发阵容轮换关系研究(经WebSearch摘要
+  获得,原文未核实):[SAGE Journals](https://journals.sagepub.com/doi/10.1177/155862351701200206)
+- Kazachkov & Vardi (2020)关于tanking与赛制设计的博弈论分析(经WebSearch摘要获得,列在
+  此处供以后需要更全面梳理"没有价值的比赛"相关文献时参考,本节未深入展开):
+  [arXiv 2211.16054(相关后续综述)](https://arxiv.org/pdf/2211.16054)
+- "Incentives matter sometimes: On the differences between league and Cup football
+  matches"(爱尔兰联赛1980-90年代积分制改革研究,经WebSearch摘要获得,原文未核实):
+  [ScienceDirect](https://www.sciencedirect.com/science/article/pii/S2773161824000144),
+  [Frontiers in Behavioral Economics关联条目](https://www.frontiersin.org/journals/behavioral-economics/articles/10.3389/frbhe.2024.1506963/full)
+- `v8_backtest_pipeline.py`第216-218行`_parse_standings_table()`源码(直接读取本仓库
+  文件确认,非外部来源):`pts`/`win`/`draw`/`lose`/`rate`被解析后丢弃、`rank`存了但从未
+  被`compute_expected_goals()`使用。
+
+---
