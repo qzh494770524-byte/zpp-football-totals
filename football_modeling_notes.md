@@ -3291,3 +3291,197 @@ University机构库、Semantic Scholar)独立列出交叉印证,可信度高于�
   被`compute_expected_goals()`使用。
 
 ---
+
+## 2026-09-26 比赛内进球的时间动态(score effects / temporal dynamics):笔记从未覆盖的方向,以及代码里第五处"解析出来却被丢弃"的字段(H2H半场战绩表)
+
+### 为什么研究这个
+
+"9-25"末尾已经明确写过:任务清单六个方向(Dixon-Coles实现细节、联赛进球基准、公众下注偏好、
+xG方法论、去水换算、样本量/sharp money)全部至少系统查过一轮,继续在这几条上找子话题边际收益
+已经很低。这次没有从任务清单的六个大类里选,而是回头审视"9-20""9-21""9-23"三节反复处理的
+同一个核心问题——"总进球分布该怎么建模"——发现它们全部隐含一个共同前提:**把一场比赛的λ、μ
+当成从开球到终场哨响固定不变的常数**(标准泊松/Dixon-Coles都是这个假设),但足球统计学里有一支
+独立的文献专门研究"进球速率在比赛过程中是否恒定",而这支文献在3293行笔记里一次也没被提到过。
+这不是任务清单外的旁枝,而是"9-23"那条"总进球方差恒等式"分析里被跳过的一个前提:`Var(总进球)
+=Var(主队)+Var(客队)+2Cov(主队,客队)`这个恒等式本身没有问题,但如果λ、μ真的会随时间和当前
+比分变化(而不是全场固定的常数),"单场比赛服从泊松分布"这个更基础的假设就需要重新审视,是
+比"过离散/欠离散"更上游的一个问题。
+
+同时,这次为了确认"半场进球时间分布"这条文献能不能落到本仓库现有数据结构上,重新读了
+`_parse_standings_table()`(v8_backtest_pipeline.py 第200-221行,"9-25"已经指出过这个函数
+丢弃了`pts`/`win`/`draw`/`lose`/`rate`五个字段),这次注意到一个"9-25"没有点名的细节:该函数
+的正则表达式**在"HT"表头出现之前就把整个表格截断了**,这是本项目第五次发现同一类"字段解析出来
+却被丢弃"的模式(前四次分别是"9-10"的`cid`/`cname`、"9-14"的`league`、"9-18"的`open_aw`/
+`last_aw`、"9-25"的`pts`/`win`/`draw`/`lose`/`rate`)。
+
+### Part A:Dixon & Robinson(1998)"出生过程模型"——比Dixon-Coles更早、但笔记从未提过的基础文献
+
+Dixon, M.J. & Robinson, M.E. (1998), "A birth process model for association football
+matches", *Journal of the Royal Statistical Society: Series D (The Statistician)*,
+47(3), 523-538——**这篇论文比"9-11"到"9-23"反复实现/检验的Dixon-Coles(1997)只晚一年,
+是同一个作者组(Mark Dixon)的后续工作,但研究的是完全不同的问题**:Dixon-Coles假设一场
+比赛的主队进球率λ、客队进球率μ从开球到终场固定不变(独立泊松或τ_ρ局部修正的联合泊松);
+Dixon & Robinson改用**交互的时间不齐次生灭过程(interacting birth processes)**——每支球队
+的瞬时进球速率是攻防实力、主场优势、**当前比分差**、**剩余比赛时间**四者的函数,会随比赛
+进行动态变化,而不是赛前定好就不再变的常数。多个独立WebSearch摘要一致确认该模型"在足球
+让球盘(spread betting)行业里被广泛使用",说明这不是纯学术玩具,是有真实的滚球定价应用
+场景的方法(**但也正因为面向滚球定价,这个模型天生需要知道比赛进行中的实时比分,这一点对
+本项目的适用性有直接影响,见下方"接入建议"第3条**)。
+
+### Part B:比分效应(score effects)的实证证据——落后方进攻强度上升,但转化率没有同比例上升
+
+多个独立来源(WebSearch摘要交叉印证,均未能绕过代理直接核实原文,可信度分层见文末)一致
+描述同一个模式,但方向比直觉复杂:
+
+1. **落后方射门更多,但进球份额反而更少**:领先方(+1)打入52.94%的进球、丢球47.06%——
+   **尽管领先方在总射门数和射正数上都被落后方压制**。落后方倾向于多射门,一方面是急于扳平
+   的心理驱动,另一方面是领先方战术上转向保守(收缩防线、优先防止再丢球而非扩大比分)。这
+   意味着"落后方进攻强度上升"和"落后方进球增多"不是同一件事,不能直接假设。
+2. **"甜蜜点"时间窗**:在校正双方实力差异后,落后方在多数比分状态下进球概率更高,存在一个
+   55-70分钟的窗口,落后1球的球队每分钟进球概率比领先1球的球队**高约0.3个百分点**——这个
+   数字来自单一来源(inpredictable.com,未能核实原文,域名被拦截),应视为量级参考而非精确值。
+3. **对"总进球"(而非净胜球)的净效应方向不确定**:领先方"收缩防线"降低了自己被射门的频率,
+   落后方"压上"提高了自己的射门频率,这两个效应对"两队进球之和"的净影响,**没有查到任何
+   文献直接给出量化答案**——现有证据只回答了"净胜球会不会变化"(通常是缩小),没有回答
+   "总进球期望会不会因此变化",这是这次研究明确没能解决的一个问题,不能假设两个效应刚好
+   抵消或叠加。
+
+### Part C:上下半场进球分布——多来源交叉印证的稳定经验规律,量级比Part B更可信
+
+- **上下半场进球占比**:多个独立来源(Expecting Goals博客、StatPair、scoreroom.com等)一致
+  报告"下半场进球明显多于上半场",具体数字在不同来源间有一定波动但方向和量级一致——一个
+  综合分析给出**上半场44% / 下半场56%**,英冠(Championship)一份数据给出56.59% vs
+  43.41%,英超/英甲/英乙给出约55.4% vs 44.6%,另一份2012-2019赛季的学术性统计给出
+  "上半场场均393.50个进球 vs 下半场502.75个进球"(具体统计口径——是否为总数还是场均——
+  这次未能核实,数量级上支持同一个"下半场明显更多"的结论)。**这几个数字互相之间有几个
+  百分点的出入,不应该当成同一个精确值使用,但"下半场比上半场多10~15个百分点左右的进球
+  份额"这个方向和大致量级,是这次查到的所有来源里最一致、重复验证次数最多的一条经验规律**。
+- **半场内部的进球分布也不均匀**:多个来源一致指出,每个半场内进球集中在临近结束的时段——
+  上半场"30-45分钟+补时"这一段的进球数大约是开场前15分钟的1.5倍;全场维度上,81-90分钟
+  (含补时)这一段占全部进球的比例可以达到18.8%,明显高于其余任何等长区间。这个模式和
+  Dixon & Robinson模型"进球速率随比赛进行整体上升"的结论方向一致,是两条独立证据链
+  (1998年学术模型 + 2020年代数据博客的minute-by-minute统计)互相印证同一个现象。
+
+### Part D:进球的"突发性"(bursty dynamics)——一篇2025年新论文,和"9-23"的方差讨论是不同层面的问题,不要混淆
+
+Nolan et al. (2025,通过arXiv 2501.18606检索到,作者来自Breck School与东北大学网络科学
+研究所),用**3433场比赛、21个联赛/赛事**的事件级数据发现:同一支球队在自己刚进一个球之后,
+短时间内再次进球的概率明显高于"进球时间间隔服从指数分布"(无记忆性)这个零假设的预测——
+论文称之为"bursty dynamics"。**这条证据和"9-23"节讨论的"单队进球边际分布是否过离散/欠离散"
+不是同一个层面的问题,不能混为一谈**:"9-23"讨论的是**整个赛季、逐场比赛之间**球队进球数
+的边际分布(每场比赛的进球数作为一个独立观测);这次的"突发性"讨论的是**单场比赛内部、
+进球之间的时间间隔**是否服从无记忆过程。前者如果成立会影响"用泊松分布拟合一个赛季的逐场
+进球数对不对"这个问题(9-23的CMP诊断),后者如果成立影响的是"90分钟内进球到达过程是不是
+真正的齐次泊松过程"这个更微观的问题——**理论上,单场比赛内部存在"进球集聚"(自激过程/
+Hawkes过程式的正反馈),会让该场比赛最终总进球数的方差比同均值的泊松分布更大(过离散),
+这和"9-23"引用的`goalmodel`包在英超赛季逐场数据上估计出的欠离散(υ=1.1225)方向相反**——
+但这不构成矛盾,因为一个是"单场比赛内部"的微观动态,一个是"跨赛季逐场比赛之间"的宏观边际
+分布,两个不同尺度上的方差性质完全可以同时成立而不冲突,以后如果有人想把这两条证据链拿来
+互相佐证或互相反驳,首先要确认在说的是同一个统计量。
+
+### 与本仓库/`v8_backtest_pipeline.py`的对应关系、数据缺口
+
+**代码审计发现(直接读取本仓库源码确认,非外部来源)**:`_parse_standings_table()`
+(第200-221行)的关键一行:
+
+```python
+ft_match = re.search(r"<th >FT</th>.*?(?=<th class='ht-desc'>HT</th>|$)", table_html, re.S)
+```
+
+这行正则表达式**只捕获从"FT"表头到"HT"表头(`<th class='ht-desc'>HT</th>`)之间的内容**,
+`(?=...)`是零宽断言,意味着一旦表格里出现"HT"表头,后面的内容全部被丢弃,只有前半段(FT,
+即按全场比分统计的胜/平/负/进球/失球/积分/排名/胜率)被解析进`stats[label]`。**这说明该
+h2h页面的Standings表格本身包含一个完整的、按半场比分统计的第二组数据(HT小节,很可能是同一
+Total/Home/Away/Last 6四行结构,只是"进球/失球/胜/平/负/积分/胜率"改成按半场比分算),现在
+被100%丢弃**——这正好是每支球队历史"上半场进球份额"的现成来源,不需要新增抓取,只需要多解析
+一段已经在内存里的HTML。**需要如实说明这次没有实际抓取一个真实nowgoal h2h页面样本核对HT小节
+的具体列结构和数据完整性**,上面的判断基于对现有正则表达式边界的推断(HT表头存在、且被现有
+正则显式排除在捕获范围之外,这两点是读代码直接确认的事实;但HT小节内部具体有几行、每行具体
+是哪几个字段,只是按FT小节结构做的合理推测,以后写解析代码前,第一步应该是打印一个真实h2h页面
+的原始HTML,核对HT小节的实际结构,而不是照抄FT小节的正则直接套用)。
+
+### 接入建议(供以后决定是否做,分层,不代下结论)
+
+1. **零成本、可以先做、纯数据管道修复**:参照"9-14""9-18""9-25"处理`league`/`open_aw`/
+   `last_aw`/`pts`的方式,给`_parse_standings_table()`加一段对称的HT解析(先用
+   `re.search(r"<th class='ht-desc'>HT</th>.*", table_html, re.S)`捕获HT小节,用第一步
+   建议的"先抓一个真实页面核对结构"确认列顺序后,复用现有`tds`解析循环,存进
+   `stats[label]['ht_scored']`/`stats[label]['ht_conceded']`一类新字段),不改变现有
+   `compute_expected_goals()`的计算逻辑。
+2. **低成本、独立离线诊断、不改v8主逻辑**:HT字段到手后,第一步只算一件事——每支球队的
+   "HT进球份额"=`ht_scored / scored`(以及失球版本),在Total/Home/Away三个切片上分别看
+   这个比例的分布,和Part C查到的联赛整体44%基准比较,确认:(a)这个比例本身的样本量/覆盖率
+   够不够(青年队/邀请赛类比赛的HT表格是否经常缺失,呼应"9-25"对`pts`/`rank`覆盖率的同一类
+   担忧);(b)不同球队之间这个比例的离散程度有多大(如果所有球队都接近44%,这个信号本身
+   就没有区分度,不值得往下投入)。
+3. **中等成本、只有第2步显示有区分度才值得做**:如果HT进球份额在球队间有真实、非噪声的
+   离散度,可以构造一个独立于`compute_expected_goals()`现有FT进失球率的新特征(比如"两队
+   HT份额均值"或"两队HT份额之差"),离线对照历史盘口漂移预测的命中率/Brier score,而不是
+   直接假设它有用就加进composite——这条和笔记里反复强调的教训(校准检验优先于假设有用)
+   一致。
+4. **明确不建议做的事**:**不要试图把Dixon & Robinson的动态生灭过程模型直接实现进本项目**。
+   该模型的核心输入是"比赛进行到第N分钟、当前比分是多少",这类信息只有在**真正的滚球
+   (in-play)数据**里才存在;确认过`v8_backtest_pipeline.py`里`live_over`/`open_over`
+   这套命名(第105-106行)指的是"临场"(赛前最后一口报价)而不是比赛进行中的实时赔率,
+   `nowgoal_collect.py`目前也没有抓取比赛进行中的分钟级比分/赔率快照——本项目整套数据结构
+   (含之前"9-10"提到过的"开盘/临场两点快照"限制)是纯粹的**赛前**预测框架,不是滚球定价
+   框架。如果要真正用上Dixon & Robinson这类比分效应模型,需要先在采集层面建立"比赛进行中
+   定期抓取当前比分+当前赔率"的全新数据管道,这是比"9-10"提到的steam-move中间时间点快照
+   工作量更大的采集层面工程,不是回测脚本能单独解决的,也不是这次研究应该建议立刻投入的
+   方向。**这次研究里唯一能落到现有赛前预测框架上的,是Part C的HT/FT份额这个球队级别的
+   静态历史统计量,不是比分效应模型本身。**
+5. **和"9-23"的关系(理论连接,未验证)**:Part B里"落后方进攻强度上升、领先方转向保守"这个
+   机制,理论上正好是"9-23"节引用的McHale & Scarf(2007/2011)"条件在两队实力强弱之后,
+   剩余依赖可能转为正相关"这条假说需要的那种"补偿机制"的一个具体候选解释——如果一场比赛
+   已经出现比分差,落后方加强进攻、领先方转向保守,两者对"给定当前比分差之后,双方接下来
+   还会进多少球"这个条件分布可能确实会产生正相关的推力。**这只是一个理论上说得通的连接,
+   这次没有做任何计算去验证它,不能当成"9-23"那条假说已经获得新证据支持,只是记录一个
+   值得以后专门检验的具体机制假设。**
+
+### 方法论诚实说明
+
+这次会话`arxiv.org`全站(含`/abs/`、`/pdf/`路径)、`pmc.ncbi.nlm.nih.gov`、
+`www.statpair.com`、`metricgate.com`、`www.soccermetrics.net`、
+`rss.onlinelibrary.wiley.com`、`scispace.com`、`tss.awf.poznan.pl`、
+`johnknightstats.substack.com`、`www.inpredictable.com`全部返回`EGRESS_BLOCKED`,和
+"9-16"到"9-25"反复记录的同一种环境限制完全一致。**本节除"代码审计"部分(直接读取本仓库
+`v8_backtest_pipeline.py`源码)之外,全部结论都只到WebSearch自动摘要这一层,没有一篇原文
+被直接读取核实**。Part C的"上下半场44%/56%"这类数字是这次少有的、被多个独立摘要来源
+互相印证、方向和量级高度一致的结论,可信度相对更高;Part B的"55-70分钟窗口0.3个百分点/分钟"
+这个具体数字只来自单一来源摘要,应视为不精确的量级参考;Dixon & Robinson(1998)原始论文
+本身完全没有读到任何一处公式或具体数字,只确认了论文存在、模型的定性结构(四类输入变量、
+交互生灭过程)以及"被让球盘行业广泛使用"这条应用背景说法,以后如果要真正评估这个模型能不能
+用上,必须先找到可以核实的原文或可靠的二次实现(比如R包`regista`的Dixon-Robinson实现,这次
+确认该功能在GitHub issue #20里被提出但截至这次检索未确认是否已经完成实现)。
+
+### 信息来源
+
+- Dixon, M.J. & Robinson, M.E. (1998), "A birth process model for association football
+  matches", *Journal of the Royal Statistical Society: Series D (The Statistician)*,
+  47(3), 523-538(仅WebSearch摘要,原文未核实,多个索引站点交叉确认论文存在与出版信息):
+  [Wiley Online Library](https://rss.onlinelibrary.wiley.com/doi/10.1111/1467-9884.00152),
+  [Oxford Academic](https://academic.oup.com/jrsssd/article-abstract/47/3/523/7123296),
+  [Semantic Scholar](https://www.semanticscholar.org/paper/A-birth-process-model-for-association-football-Dixon-Robinson/052c3ab37c5dca8883956e04f6e62efce2e8d714),
+  [scispace摘要页](https://scispace.com/papers/a-birth-process-model-for-association-football-matches-3o2fwjuptu)
+- `Torvaney/regista`(R包)GitHub Issue #20"Dixon-Robinson fit"(直接WebFetch读取GitHub
+  issue页面成功,确认该功能截至issue提出时(2018年)尚未实现,这次未能确认最新状态):
+  [github.com/Torvaney/regista/issues/20](https://github.com/Torvaney/regista/issues/20)
+- 比分效应(领先52.94%进球份额、落后方多射门但转化率低、55-70分钟窗口0.3pp/分钟)(均仅
+  WebSearch摘要,原文域名`inpredictable.com`、`blogarchive.statsbomb.com`被拦截未核实):
+  [inpredictable.com: On the Probability of Scoring a Goal](https://www.inpredictable.com/2014/07/on-probability-of-scoring-goal.html),
+  [StatsBomb Blog Archive: Score Effects](https://blogarchive.statsbomb.com/articles/soccer/score-effects/)
+- 上下半场进球分布(44%/56%及各联赛具体数字)(均仅WebSearch摘要,原文域名
+  `expectinggoals.com`、`statpair.com`、`scoreroom.com`被拦截未核实):
+  [Expecting Goals: The Game of Two Halves](https://www.expectinggoals.com/p/the-game-of-two-halves),
+  [StatPair: Half Time Betting](https://statpair.com/blog/first-half-second-half-statistics-hidden-value),
+  [scoreroom.com 1st/2nd Half Goal Stats](https://scoreroom.com/stats-1-half-and-2-half/)
+- 半场内部进球时间分布(81-90分钟占18.8%等)(仅WebSearch摘要,原始来源未直接核实):
+  综合自WebSearch结果摘要,具体数字来源站点未能逐一核实域名可达性
+- Nolan et al. (2025), "Temporal dynamics of goal scoring in soccer"(仅WebSearch摘要,
+  `arxiv.org`全路径被拦截,未核实原文):[arXiv 2501.18606](https://arxiv.org/abs/2501.18606),
+  [ResearchGate](https://www.researchgate.net/publication/388633672_Temporal_dynamics_of_goal_scoring_in_soccer)
+- `v8_backtest_pipeline.py`第200-221行`_parse_standings_table()`、第105-106行
+  `live_over`/`open_over`字段命名源码(直接读取本仓库文件确认,非外部来源):HT表头存在但
+  被现有正则显式排除在捕获范围外;`live_over`对应"临场"(赛前最后报价)而非滚球实时赔率。
+
+---
