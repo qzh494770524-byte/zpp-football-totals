@@ -4142,3 +4142,187 @@ Rue & Salvesen模型的具体先验设定,均只到WebSearch摘要转述层面,�
   网格搜索或样本外校准逻辑。
 
 ---
+
+## 2026-09-30 用市场自己的赔率反推"隐含期望进球值"(goal expectancy inference):1X2+大小球联合估计μ_home/μ_away/ρ——笔记从未覆盖的"跨市场联合反推"方法,以及一处可以零成本修复的字段丢弃
+
+### 为什么研究这个
+
+笔记开头"已知验证过的东西"和文末索引已经覆盖了任务清单六大类方向里几乎所有明显的角度:
+真Dixon-Coles(9-11、9-11续3)、ξ时间衰减校准(9-29)、收缩先验(9-13)、双变量泊松/copula
+(9-21)、过离散/负二项/CMP(9-20、9-23)、π评级(9-22)、联赛进球基准(9-14)、公众压大
+偏好与GAP评级代理信号(9-12)、xG方法论(结论是不可行,9-12附带回答)、去水方法(multiplicative
+vs Shin, 9-10续3;Power method两边/三边市场差异,9-24)、亚洲让球盘市场效率与退款处理
+(9-18)、样本量/统计显著性正式方法(9-16)、预测组合/去相关(9-17)、sharp money识别
+(9-10)。这次专门用
+`grep -E "隐含分布|implied distribution|多条线|同一家公司.*多个盘口|市场隐含.*总进球分布"`
+扫了全文,**零命中**——笔记里所有去水/反推相关的研究,做的都是"对同一条线的两个方向价格
+去水算出一个概率"(单线、单市场),从未出现"把大小球市场和1X2市场的价格联合起来,反推一个
+内部一致的泊松/Dixon-Coles参数网格"这个方向,这次定向查了这个方向。
+
+顺带说明一个容易混淆的地方:9-18节的Hegarty & Whelan研究讨论的是**亚洲让球盘(净胜球差)**
+市场因为存在"半退/全退"结算规则,传统去水公式对它失效、需要专门处理退款概率的方法论——
+和这次要写的"大小球quarter线怎么拆分"、"用多个市场联合反推一套内部一致的进球期望值"是
+不同的问题(一个是"怎么正确去水一条已知线的两个方向价格",这次是"怎么把好几条不同的线/
+不同的市场综合成同一套底层参数"),不是重复研究。
+
+### Part A:核心方法论——用1X2赔率反推隐含期望进球值(goal expectancy inference)
+
+**理论基础**:Dixon & Coles (1997)本身就是"用泊松边际+ρ低比分修正,把(μ_home, μ_away, ρ)
+映射成整张比分概率网格,再从网格读出1X2/大小球/让球概率"这个方向的模型(笔记"9-11"节已经
+完整实现过这个正向映射)。这次要用的是**反方向**:不是拿历史比分去估计(μ_home, μ_away),
+而是拿**赔率本身**反推出"如果市场是按这样一套泊松/Dixon-Coles结构定价的,那么隐含的
+(μ_home, μ_away[, ρ])是多少"。这个反方向思路本身在文献里有明确的理论基础——Karlis &
+Ntzoufras在双变量泊松建模足球比分的系列工作(2003 *JRSS-D*,笔记"9-21"节已经引用过、
+核实过原文的[stat-athens.aueb.gr PDF](http://www2.stat-athens.aueb.gr/~jbn/papers2/08_Karlis_Ntzoufras_2003_RSSD.pdf))
+里的参数化结构,是这类"从概率反推泊松参数"数值方法的通用数学基础,但**这次没有查到
+Karlis & Ntzoufras本人或Dixon & Coles原文里专门做"从赔率反推参数"这一步的公开代码或
+公式**——下面这套具体实现是从一个独立的开源工具包里直接读取源码确认的,理论基础可信、
+但"从赔率反推"这个具体数值算法本身应视为工程实现而非这几位作者的原创贡献,记录时两者
+分开标注。
+
+**具体实现(直接读取GitHub源码确认,不是WebSearch摘要)**:penaltyblog(Martin Eastwood
+维护的开源足球建模Python包,笔记"9-13""9-22"节已经引用过它的Dixon-Coles/π评级文档,
+但当时`docs.pena.lt`和`penaltyblog.readthedocs.io`两个域名都被代理拦截、只能引用摘要)
+这次通过`raw.githubusercontent.com`(和"9-29"节dashee87那次一样,GitHub raw content域名
+未被拦截,即使对应的文档站被拦截)**直接读取了两个源文件**:
+`penaltyblog/models/goal_expectancy.py`和对应的文档源文件`docs/models/goal_expectancy.rst`,
+确认了两个函数:
+
+1. **`goal_expectancy()`**——只用1X2三项概率(主胜/平/客胜)反推(μ_home, μ_away):
+   把问题参数化成`log_mu_home`、`log_mu_away`(取对数是为了让优化器在正实数域里搜索、
+   避免负的期望进球值,和"9-13"节收缩先验讨论"参数化技巧"是同一类工程手法),对每一对
+   候选(μ_home, μ_away)生成两个泊松PMF向量(0到`max_goals`),外积得到联合比分概率矩阵,
+   加总得到主胜/平/客胜概率,和市场给的目标概率算Brier score或交叉熵损失,用
+   `scipy.optimize.minimize`(默认L-BFGS-B)搜索。文档给的**具体例子**(直接读到的数字,
+   不是摘要转述):市场1X2隐含概率(去水后)0.45/0.28/0.29,反推出home_exp≈1.34、
+   away_exp≈1.02,拟合误差可以忽略不计。
+2. **`goal_expectancy_extended()`**——同时用1X2三项概率**和大小球2.5球的over/under两项
+   概率**,联合反推三个参数:(μ_home, μ_away, ρ)(ρ就是Dixon-Coles的低比分修正参数)。
+   目标向量是`[p_home, p_draw, p_away, p_over_2.5, p_under_2.5]`共5个数(但p_away和
+   p_under_2.5分别由前面的数值决定,独立约束数是3个:1X2贡献2个自由度+O/U 2.5贡献1个
+   自由度),同样用L-BFGS-B在`(log_mu_home, log_mu_away, rho)`空间里搜索,支持
+   `remove_overround`参数(拟合前先把输入概率归一化到和为1,即做一次简单去水)。
+3. **文档明确写出的一条重要警告(直接读到,不是我自己的推测)**:"you have multiple
+   unknowns (μ_home, μ_away, and potentially rho) constrained by limited market data
+   ... inherent parameter trade-offs may exist"——这和我自己按自由度算的账完全对得上:
+   3个待估参数、3个独立约束,在数学上是"恰好可识别"的边界情况(不是有富余约束的超定问题),
+   意味着优化结果**对初始值、bounds、损失函数选择(Brier vs cross-entropy)都可能敏感,
+   不能假设只跑一次L-BFGS-B就稳定收敛到全局唯一解**,以后如果真的要实现,必须做多组随机
+   初始值重启、检查解是否一致,这是文档自己承认、也是这次研究里最值得记录的一条工程风险,
+   不是可以忽略的细节。
+
+### Part B:FootballProbabilityGrid的"内部一致性"原则,以及大小球1/4球盘(quarter line)的标准拆分方法
+
+同一个包里的`FootballProbabilityGrid`类(`.predict()`之后返回的对象)体现了这次要点名的
+另一个方法论:**所有市场(1X2、大小球、亚洲让球、BTTS……)都从同一张比分概率网格读出,
+保证互相之间永远不会自相矛盾**——这正是Part A反推参数的意义所在:一旦反推出
+(μ_home, μ_away[, ρ]),就可以生成一张完整的比分网格,从这张网格里读出**任何一条线**
+(不只是市场实际报价的那条)的大小球概率、任何让球盘的概率,而且这些概率天然满足"大2.5概率
++小2.5概率=1"、"大2.5概率单调大于大3.5概率"这类一致性约束,不需要对每条线分别去水再拼接。
+这次直接读取源码确认了`totals()`方法处理1/4球盘(quarter line,让球盘常见写法是"2/2.5"
+这种"分盘")的具体规则:**quarter线(如2.25、2.75)按50%对应下面那条半球/整数线、50%
+对应上面那条线,分别算概率后取平均**——这是这次唯一一处直接从代码里确认、而不是猜测的
+quarter线拆分公式,和市场上"1/4球盘=一半资金下在整数盘、一半下在半球盘"的通俗说法一致,
+但这次没有找到能独立核实这条具体拆分规则的学术文献,只能算"一个成熟开源实现里验证过的
+工程约定",可信度介于"文献结论"和"猜测"之间,如实标注。
+
+### Part C:更简单的单市场反推(只用O/U一条线反推总进球λ)——这次只查到方向,没能核实细节
+
+除了上面这套"多市场联合反推"的方案,还查到一篇更简单的思路:只用大小球一条线的两项去水
+概率,单独反推"总进球服从泊松分布"这一个假设下的λ(不区分主客队,只算总进球期望值),
+用一维数值求根(比如`scipy.optimize.brentq`这类方法,让预测的P(总进球>线)匹配去水后的
+市场概率)。这条思路来自R-bloggers一篇题为"Expected goals from over/under odds"
+(2020)的博文,这次`www.r-bloggers.com`被代理拦截,**只查到标题和搜索引擎摘要提到的
+方法框架(转赔率为概率、一维求根匹配泊松CDF),没有查到具体代码或数值细节**,可信度明显
+低于Part A/B(那两部分的核心结论是直接读取GitHub源码确认的),这里只记录方向,不建议
+当作可以直接抄的实现依据——如果以后真的要做单市场反推,Part A的`goal_expectancy()`
+本质上更完整(能拆出主客队分开的期望值,不只是总量),没有必要单独再实现这个更简化的
+版本,除非只有大小球一个市场的赔率、完全没有1X2数据。
+
+### 与本仓库/`v8_backtest_pipeline.py`的对应关系:一处可以零成本修复的字段丢弃,以及具体接入方案
+
+1. **确认一个和"9-10续3"记录的同一处代码位置,但这次有新的理由去修它**:
+   `v8_backtest_pipeline.py`第97-110行`load_workbook_data()`解析`各庄大小球与欧赔`
+   这个sheet时,对`ptype == '胜平负(欧洲赔率)'`的行解包出`open_a, open_mid, open_b,
+   live_a, live_mid, live_b`,但第110行`eu_by_match[mid].append(dict(open_draw=open_mid,
+   live_draw=live_mid))`**只存了`open_mid`/`live_mid`(平局赔率),主胜`open_a`/`live_a`
+   和客胜`open_b`/`live_b`在解包出来之后立刻被丢弃,从未写进`eu_by_match`**——这是
+   "9-10续3"已经点名过的缺口("主胜/客胜赔率被丢弃"),**但当时给的理由是"给euro_sig做
+   真正的devig"(已经在独立测试脚本里验证过Shin方法没有带来提升),这次是一个新的、
+   独立的理由**:哪怕不改euro_sig本身的计算方式,只要把这两列存下来,就能在**同一个
+   快照时间点(open或live)**同时拿到完整的1X2三项赔率**和**大小球赔率,喂给Part A的
+   `goal_expectancy_extended()`思路,反推出这个时间点市场隐含的(μ_home, μ_away)。这不
+   需要抓取任何新数据,`各庄大小球与欧赔`这个sheet本身已经把两类赔率放在同一张表里
+   (只是分ptype存成两种行),只是`load_workbook_data()`目前的解析逻辑没有把它们对齐到
+   同一场比赛、同一公司、同一时间点这三个维度上再联合使用。
+2. **具体接入方案(独立脚本,不改v8主逻辑,和笔记一贯的建议一致)**:
+   a. 先补齐字段:比照9-10续3当时"在独立测试脚本里重新读一遍原始sheet"的做法,写一个
+      独立脚本重新解析`各庄大小球与欧赔`,这次把`open_a`/`open_b`/`live_a`/`live_b`
+      也存进去,得到每场比赛、每家公司在open和live两个时间点的完整
+      (主胜, 平, 客胜, 大, 小, 线)六元组。
+   b. 对每场比赛选一家覆盖两类数据都全的公司(优先选六庄名单里的,呼应笔记"六庄"分析
+      的公司优先级),在open和live两个时间点分别用`goal_expectancy_extended()`思路
+      反推出(μ_home, μ_away),算出Δ(μ_home+μ_away)作为一个新的"隐含总进球期望值漂移"
+      信号,和现有`line_sig`/`water_sig`在同一批历史数据上比较方向一致性、命中率、
+      Brier score(参照"9-19"节的教训,不能只看命中率)。
+   c. **明确的预期,不要一开始就假设它更好**:这套方法本身完全建立在市场自己的1X2和
+      大小球价格之上,没有引入任何独立于市场的新信息,和"9-11续2"两篇文献的元结论
+      ("重新组合已知市场信息理论上很难有增量")是同一个天花板——**这次研究要解决的
+      不是"能不能跑赢市场"这个已经被反复验证过很难的问题,而是"同一份市场信息,用一个
+      内部一致的参数化模型去整合,会不会比现在这种'各个子信号分别算sign()再加权平均'
+      的方式噪声更小、样本外表现更稳"这个更谦虚的问题**,是否成立必须靠b步骤实际回测
+      验证,不能预设结论。
+   d. **一个额外可能有诊断价值的副产品**:如果反推稳定(Part A第3点的可识别性问题在
+      实践中不算太严重),同一个模型还能给"consensus_line"之外的其他线打分——现在的
+      代码里如果A公司报2.5、B公司报3,`compute_odds_drift_signal()`只能分别对各自的
+      线算`sign()`再平均,没有办法判断"A公司说2.5大更贵"和"B公司说3小更贵"这两条信息
+      谁更强、要不要加权,如果反推出同一套(μ_home, μ_away),理论上可以把不同公司报的
+      不同线全部换算到同一把尺子上再比较——但这只有在字段补齐、Part B步骤实际跑通之后
+      才能验证是否真的比现在的处理方式更好,现在只记录这个可能性,不代表已验证。
+3. **明确不建议做的事**:(a) 不要因为这次查到"内部一致的参数化模型"这个概念,就认为
+   它能解决"9-18"节记录的"不同公司报不同让球盘线"这类比较问题——这次查到的方法只处理
+   了1X2+大小球2.5这一组市场,没有查到把亚洲让球盘也纳入同一个联合反推框架的具体实现
+   (虽然理论上`FootballProbabilityGrid`的比分网格本来就能读出让球盘概率,但"反推
+   ρ+μ时是否要同时用让球盘价格作为第四个约束"这次没有查到任何已实现的例子);(b) 不要
+   跳过Part A第3点提到的多初始值重启直接上线用——这是文档自己承认的已知数值风险,不是
+   这次研究可以替以后的实现工作打包票的细节。
+
+### 方法论诚实说明
+
+这次`penaltyblog.readthedocs.io`、`docs.pena.lt`、`www.r-bloggers.com`、`oddspapi.io`
+全部返回`EGRESS_BLOCKED`,和笔记"9-12"到"9-29"反复记录的同一种环境限制一致。**这次和
+"9-29"节一样,`raw.githubusercontent.com`未被拦截,成功直接读取了两个源文件**:
+`penaltyblog/models/goal_expectancy.py`(Part A第1、2点的算法描述、参数化方式、损失函数
+选项)和`docs/models/goal_expectancy.rst`(Part A第3点的具体数值例子0.45/0.28/0.29→
+1.34/1.02、"parameter trade-offs may exist"这句原话)——这两部分可信度和笔记里标注过
+"已读全文"的章节相当,是这次研究里最扎实的部分。Part B的quarter线拆分规则同样来自直接
+读取`football_probability_grid.py`源码(具体文件路径这次WebFetch工具返回的是转述而非
+逐行代码,但明确说明是读取该文件后的转述,不是纯摘要),可信度次之。Part C(R-bloggers
+单市场反推)、Karlis & Ntzoufras与"反推赔率"这一具体数值方法之间的关联,均只到WebSearch
+摘要层面,**没有一篇原始页面被直接读取**,已在正文里如实标注为方向性参考,不作为可以
+直接实现的依据。
+
+### 信息来源
+
+- Karlis, D. & Ntzoufras, I. (2003), "Analysis of sports data by using bivariate Poisson
+  models" (*JRSS-D*)——理论基础,笔记"9-21"节已核实原文,这次仅引用其参数化结构作为
+  "从概率反推泊松参数"数值方法的通用数学背景,不代表该文献本身做过"从赔率反推"这一步:
+  [原文PDF](http://www2.stat-athens.aueb.gr/~jbn/papers2/08_Karlis_Ntzoufras_2003_RSSD.pdf)
+- **本节核心方法,直接读取GitHub源码确认**:penaltyblog(Martin Eastwood),
+  `goal_expectancy()`/`goal_expectancy_extended()`函数与文档:
+  [goal_expectancy.py](https://raw.githubusercontent.com/martineastwood/penaltyblog/master/penaltyblog/models/goal_expectancy.py),
+  [goal_expectancy.rst文档源文件](https://raw.githubusercontent.com/martineastwood/penaltyblog/master/docs/models/goal_expectancy.rst),
+  对应的只读文档站页面(本次被拦截,未直接访问):
+  [penaltyblog.readthedocs.io: Inferring Goal Expectancies from Bookmaker Odds](https://penaltyblog.readthedocs.io/en/master/models/goal_expectancy.html)
+- FootballProbabilityGrid的"内部一致性"设计与quarter线拆分规则,直接读取源码转述确认:
+  [football_probability_grid.py](https://raw.githubusercontent.com/martineastwood/penaltyblog/master/penaltyblog/models/football_probability_grid.py),
+  对应文档站页面(被拦截,未直接访问):
+  [penaltyblog.readthedocs.io: FootballProbabilityGrid](https://penaltyblog.readthedocs.io/en/latest/models/football_prob_grid.html)
+- 单市场(仅大小球一条线)反推总进球λ的思路,仅WebSearch标题/摘要,原文被拦截未核实:
+  [R-bloggers: Expected goals from over/under odds (2020)](https://www.r-bloggers.com/2020/09/expected-goals-from-over-under-odds/)
+- `v8_backtest_pipeline.py`第97-110行`load_workbook_data()`函数(直接读取本仓库源码
+  确认,非外部来源):确认`open_a`/`live_a`(主胜)、`open_b`/`live_b`(客胜)在
+  `ptype == '胜平负(欧洲赔率)'`分支里被解包后未写入`eu_by_match`,是可以零成本补齐的
+  丢弃字段。
+
+---
