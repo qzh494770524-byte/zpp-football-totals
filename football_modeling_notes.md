@@ -4522,3 +4522,234 @@ DOI: 10.1086/296025,"Prices of State-Contingent Claims Implicit in Option Prices
   仓库内无xlsx样例数据,也无法核实实际数据里跨公司不同线的出现比例。
 
 ---
+
+## 2026-10-04 Copula依赖结构:填补"9-21"留下的具体缺口——双变量泊松结构上只能表非负相关,copula能不能表负相关、怎么接、要不要新依赖
+
+### 为什么研究这个
+
+"9-21"那节已经把经典trivariate reduction双变量泊松的结构性限制查清楚了:`λ3≥0`恒成立,
+数学上表达不出男子联赛真实测到的小幅负相关(-0.06~-0.162)。那节结尾把"copula"列成候选
+("9-20"引用的McHale & Scarf用copula而非trivariate reduction建模依赖结构",列为候选文献),
+"9-23"节Part B第3点又提了一次("McHale & Scarf用copula对国际比赛数据建模依赖结构……这次
+没有深入分析,列为候选"),但翻遍全文,**copula这条候选路径本身——具体是哪种copula、公式
+是什么、离散变量(进球数是整数,不是连续变量)怎么处理、有没有现成实现、要不要引入新依赖——
+从未被真正展开查过,两次都只停在"存在一篇论文"这一层**。这次定向把这个坑填上,而不是第三次
+重复"列为候选"。
+
+### Part A:McHale & Scarf其实是两篇不同的论文,研究对象不同,之前笔记没有区分清楚
+
+这次搜索确认McHale & Scarf在这个方向上有两篇独立的论文,**此前"9-20""9-23"引用时没有
+区分过是哪一篇**,需要纠正:
+
+1. **McHale, I. & Scarf, P. (2007), "Modelling soccer matches using bivariate discrete
+   distributions with general dependence structure", *Statistica Neerlandica*, 61(4),
+   432-445**——这篇的研究对象是**射正/射失数(shots-for/shots-against)这类比赛过程统计量,
+   不是进球数本身**,用Archimedean copula族(依赖结构由一个一维投影完全决定,对边际变换
+   不变)构造新的二元离散分布,核心卖点正是"比双变量泊松更灵活,因为它也能表达负相关"。
+2. **McHale, I. & Scarf, P. (2011), "Modelling the dependence of goals scored by opposing
+   teams in international soccer matches", *Statistical Modelling*, 11(3), 219-236**——
+   这篇才是直接研究**进球数**依赖结构的那篇,是"9-23"节真正想引用的文献。
+3. **对"9-23"节已有结论的修正,需要如实记录**:"9-23"节写的是"总体上有一个小的负相关,
+   主要和两队实力不对等有关;条件在两队实力评级上之后,剩余依赖反而变成轻微正相关;比赛
+   越势均力敌,依赖程度越接近零;比赛越悬殊,负相关越明显"——这次重新查到的2011年论文
+   摘要级描述是:"依赖的强弱取决于比赛的竞争平衡程度,势均力敌的比赛整体依赖很低,比赛
+   竞争性越低,依赖越向负的方向增强"。**这次独立搜索到的描述,只印证了"9-23"结论里
+   "越势均力敌越接近零、越悬殊负相关越明显"这一半,没有找到任何来源支持"条件在实力评级上
+   之后反而转为正相关"这一半——这次没有查到任何证据证实或推翻这个"转正"的说法,只能
+   如实标注:这半条结论目前仍然悬而未决,比"9-23"写的时候更应该被当作不确定,不要当成
+   已经有两条独立来源互相印证的结论来用。**
+
+### Part B:GJRM/Marra & Radice框架——直接读到了处理离散copula的核心代码,不是摘要转述
+
+这是这次研究里最扎实的部分。足球应用这条线的后续工作是Marra, Radice等人围绕R包
+**GJRM**(Generalised Joint Regression Modelling)做的一系列论文,其中《Generalised
+Joint Regression for Count Data with a Focus on Modelling Football Matches》(arXiv
+1908.00823,后发表于*Statistics and Computing*, 2020)明确把这套框架应用到足球比赛数据,
+核心改动是给两个边际(主队进球、客队进球)的回归系数加一个"相等"约束(呼应足球比赛主客队
+地位对称这个先验),论文摘要/多个索引页一致说这个约束让样本外预测表现变好——**但这次同样
+遇到几乎全部学术域名被拦截的情况(`arxiv.org`、`ar5iv.labs.arxiv.org`、
+`discovery-pp.ucl.ac.uk`、`openaccess.city.ac.uk`、`publications.goettingen-research-online.de`、
+`sa-ijas.org`、`api.semanticscholar.org`全部`EGRESS_BLOCKED`),没有拿到具体的log-likelihood/
+RPS/准确率数字,也没有确认论文是否专门讨论了大小球/总进球市场(只确认讨论的是"football
+matches"这个更宽泛的范畴)**。
+
+**但`raw.githubusercontent.com`这次又一次没被拦截**(和"9-17""9-22""9-23""9-29""9-30"
+一致的模式),这次直接读到了GJRM包(`cran/GJRM`镜像)里处理"两个边际都是离散变量"这种情况
+的核心源码,这是本节真正的新发现,不是转述:
+
+1. **离散copula联合概率质量函数,用的是标准的"矩形差分"公式,直接从`R/bdiscrdiscr.R`
+   读到**:设两个边际各自的CDF是`F_x`、`F_y`(本项目场景下就是主队/客队进球数各自的泊松
+   或负二项CDF),copula的CDF是`C(u,v)`,则
+   ```
+   P(X=x, Y=y) = C(F_x(x), F_y(y)) - C(F_x(x-1), F_y(y)) - C(F_x(x), F_y(y-1)) + C(F_x(x-1), F_y(y-1))
+   ```
+   (边界取`F_x(-1)=F_y(-1)=0`)。这是把"两个边际各自累积概率围成的矩形"用容斥原理拆成
+   "恰好等于x和y"这一个格子的概率,是离散copula的标准做法(不是"连续化/加抖动"这种
+   近似),**对进球数这种均值只有1~1.5、低比分格子概率占比很大的场景,比"把离散变量硬凑成
+   连续变量再用连续copula公式"这种常见但有偏的简化处理更合适**——这一点和Dixon-Coles现有
+   的`tau()`函数、`match_ou_prob()`构造0-10×0-10整张比分网格再归一化求和的做法在"工程
+   形态"上高度兼容,可以直接把`tau(x,y,lam,mu,rho) * Pois(x;lam) * Pois(y;mu)`这一行,
+   替换成上面这个矩形差分公式,其余求网格、求P(x+y>line)的代码结构不需要大改。
+2. **copula家族代码表,直接从`R/BiCDF.r`读到,明确区分了"天然能表负相关"和"需要旋转才能
+   表负相关"两类**:Gaussian(代码1)、Frank(代码14)、AMH(代码55)、FGM(代码56)这几个
+   族,依赖参数本身就能连续地从负到正取值,不需要任何额外处理;而Clayton(2-5)、Joe(6-9)、
+   Gumbel(10-13)、Galambos(60,62-64)这几个Archimedean族,原始参数只能表正相关,**要
+   表负相关必须用"90°/270°旋转"这个标准技巧**(90°/270°旋转的直觉是把其中一个变量换成
+   "1减去它的CDF"再套用原copula,等价于把正相关关系翻转成负相关关系)。**这一点直接回答
+   了"9-21"节提出但没有查清楚的问题——"双变量泊松是正相关特例,有没有别的工具天然支持
+   负相关":答案是有,Gaussian/Frank/AMH/FGM这几族天然就是,不需要像Archimedean族那样
+   靠旋转这个额外技巧去凑负相关,是比"双变量泊松+旋转Archimedean copula"更直接的候选。**
+3. **这次顺手确认了GJRM包本身没有内置任何足球/soccer的示例数据集**(在GitHub仓库里搜索
+   "football"零命中)——Marra & Radice论文里用的足球数据是论文自己准备的,不是包自带
+   demo,以后如果真要用这个框架,数据需要自己整理,不是装个包就能跑通一个现成例子。
+
+### Part C:不需要新依赖——Python自己的statsmodels已经有现成的copula CDF实现,直接读到源码确认
+
+这是这次研究对本项目最直接的价值:**GJRM是R包,但本项目是纯Python代码库
+(`dixon_coles.py`只用numpy/scipy),如果要试copula这条路,不需要引入R依赖或重新手写
+copula公式**——`statsmodels`(本项目目前未使用,但是数据科学Python生态里最主流、最
+成熟的统计包之一,不是小众依赖)的`statsmodels.distributions.copula`子模块已经实现了
+`GaussianCopula`和`FrankCopula`,这次直接通过`raw.githubusercontent.com`读到了两者的
+源码(不是文档摘要):
+
+1. **`FrankCopula`**(`statsmodels/distributions/copula/archimedean.py`):构造时
+   **显式允许`theta`取任意非零实数**(`if theta == 0: raise ValueError("Theta must be
+   !=0")`,文档字符串写明定义域是`θ∈ℝ\{0}`),`cdf()`方法实现的公式是
+   `-1/θ · log[1 - ∏(1-exp(-θuⱼ)) / (1-exp(-θ))^(d-1)]`,和GJRM代码表里"Frank天然支持
+   负相关"的结论完全对得上,**θ<0就是负相关,不需要任何旋转技巧,直接传负数**。
+2. **`GaussianCopula`**(`statsmodels/distributions/copula/elliptical.py`):构造函数
+   `__init__(self, corr=None, k_dim=2, ...)`,二元情形下可以直接传一个标量相关系数
+   (代码会自动拼成2×2矩阵),文档字符串写明取值范围是`[-1,1]^(d×d)`,`cdf()`方法是
+   "先把均匀分布的边际概率通过标准正态分位函数变换、再调用多元正态CDF"这个标准做法——
+   **负的`corr`同样是合法输入,不需要额外处理**。
+3. **这意味着接入成本比表面看起来低**:不需要重新实现Frank/Gaussian copula的CDF公式
+   (直接复用`statsmodels`现成的`.cdf()`),只需要在独立测试脚本里:(a) 用现有
+   `dixon_coles.py`的`fit_dixon_coles()`产出的λ、μ算出两个泊松边际的CDF;(b) 按Part B
+   第1点的矩形差分公式,把`statsmodels`的copula CDF代入,构造新的比分网格(替换掉现有
+   `tau()`那一步,不是叠加——"9-20"已经证明τ_ρ对line≥2的大小球概率贡献恰好为零,同时
+   再引入一个copula依赖参数,等于在没有必要的地方保留一个无效的自由度);(c) 用1个
+   新增的全局依赖参数(Frank的θ或Gaussian的corr)做MLE,拟合在"9-11续3"已经验证过可以
+   拿到完整赛季逐场比分的K联赛/日职联/英超数据上。
+
+### Part D:参数量和"9-13""9-21"反复强调的小样本担忧之间的关系——这条路比双变量泊松更省参数
+
+"9-21"节第2条"不建议做的事"里已经指出,双变量泊松需要在α/β/γ之外再联合估计`λ3`(或其
+协变量结构),进一步增加参数量,和"9-13"警告过的小样本(K联赛125场train)过拟合是同一类
+风险。**这次要记录的copula方案在参数量上明显更省**:不管选Frank还是Gaussian,依赖结构
+只多一个全局标量参数(θ或corr),和现有`dixon_coles.py`里`rho`这一个标量参数的量级完全
+一样,不是"每队再估一个参数"或"引入协变量结构"这种会显著加重小样本负担的做法——**这意味着
+如果以后真要验证这条路,K联赛125场train这个样本量级,大概率足够支撑"多估一个全局标量"这件
+事本身,不需要像双变量泊松那样担心参数量和样本量不匹配,这是这次研究发现的、copula方案
+相对双变量泊松的一个具体优势,不是泛泛的"copula更灵活"这种定性判断。**
+
+**一个可以直接复用的技术细节,不是本节研究到的新文献,是标准的统计学恒等式,记录下来
+供以后实现时参考**:Frank copula的θ和Kendall's tau、Gaussian copula的corr和Spearman's
+rho之间都有解析/半解析的对应关系,意味着**估计这一个全局依赖参数,不一定需要从头做数值
+优化**——可以先用历史数据算出两个边际(主队进球、客队进球)观测值的**秩相关**(Kendall's
+tau或Spearman's rho,不是"9-21"节已经算过的原始进球数Pearson相关系数,秩相关对离散计数
+数据的"打结"问题更稳健),再用这个解析关系反推初始的θ/corr,作为MLE的起点或者直接当成
+矩估计使用,不需要完全依赖数值优化器从零搜索。
+
+### 与本仓库/`dixon_coles.py`的对应关系、接入建议(供以后决定是否做,不代下结论)
+
+1. **零成本、可以立刻做、复用"9-21"已经建议但这次指出需要换一种相关系数的诊断**:
+   "9-21"节建议算`np.corrcoef(hs, as_arr)`(原始进球数的Pearson相关),这次建议补充算
+   一版**`scipy.stats.kendalltau(hs, as_arr)`和`scipy.stats.spearmanr(hs, as_arr)`**——
+   如果以后真要用Frank/Gaussian copula的解析关系式反推初始依赖参数,需要的是秩相关,不是
+   Pearson相关,这是这次研究发现的、"9-21"诊断建议里一个没有讲清楚的技术细节,成本和"9-21"
+   那条诊断完全一样(同一份`fetch_league_matches()`数据,多算两个`scipy.stats`函数)。
+2. **低成本、需要新增`statsmodels`这一个依赖(主流包,不是生僻库)、独立测试脚本、不改
+   `dixon_coles.py`主逻辑**:在独立脚本里复制一份`fit_dixon_coles()`的拟合结果(λ、μ,
+   不需要重新拟合攻防强度,也不需要保留`rho`/`tau()`那一步,因为"9-20"已经证明它对line≥2
+   的大小球概率没有贡献),按Part C第3点的流程,用`statsmodels.distributions.copula`的
+   `FrankCopula`或`GaussianCopula`加Part B的矩形差分公式重新构造比分网格,在"9-11续3"
+   已经验证过数据可得的K联赛/日职联/英超三个联赛上,用同样的日期切分跑一遍2.5线Over/Under
+   的命中率和Brier score,直接和"9-11续3"记录的基线(K联赛50.0%/0.262、日职联57.8%/0.253、
+   英超51.6%/0.257)对比——这是这次研究里成本最低、能直接产出可比数字的下一步,比"9-21"
+   提出的"如果诊断显示正相关才值得做双变量泊松"门槛更低(这次不需要先等诊断结果,因为
+   copula方案本身就能表负相关,不存在"诊断显示负相关就不用做"这种前提条件)。
+3. **必须在实现前明确的一件事,避免重复计算依赖结构**:现有`dixon_coles.py`的`tau()`
+   函数和这次要加的copula依赖参数,都是在"同一件事"上做修正(进球联合分布里主客队之间的
+   依赖关系),**不能同时保留两者**——"9-20"已经证明`tau()`对line≥2的大小球概率贡献
+   恰好为零,所以接入copula时,应该是"用copula的矩形差分公式完全替换`tau(x,y,lam,mu,rho)
+   * Pois(x;lam) * Pois(y;mu)`这一行",不是在现有公式基础上再叠加一层copula,否则会
+   引入两套互相缠绕、没有必要的自由度,而且"9-20"的数学推导(τ_ρ对line≥2恰好无效)就
+   不再适用于"copula叠加在τ_ρ之上"这种混合写法,需要重新推导。
+4. **样本量记录义务(呼应"9-16"的多重检验纪律)**:这次如果真的做了上面第2条的测试,
+   按"9-16"的建议应该记入"待创建但至今没创建"的`trials_log.json`——这是继"9-13"收缩
+   先验、"9-20"CMP诊断、"9-24"power去水法之后,又一个"接入建议写了但现在没有人去跑"的
+   独立测试项,如果以后连续几次都没有真正执行,也值得反思是不是应该先把`trials_log.json`
+   本身建起来,而不是继续在笔记里新增"建议以后测"的条目。
+5. **明确不建议做的事**:(a) 不要在没有先做第1条诊断(秩相关)的情况下,直接假设Frank
+   或Gaussian哪个copula族更适合本项目数据就去实现——两族在负相关区间的具体形状(尾部
+   依赖结构)不同,Part A/B都没有查到针对本项目这类小样本、中小联赛场景的对比证据,应该
+   两个都试、让样本外Brier score说话,不要凭"文献更常提到Gaussian"这类弱先验直接选边;
+   (b) 不要引入GJRM本身(R包)或为了用它而给项目新增R依赖——这次已经确认`statsmodels`
+   在Python生态里能提供同等的copula CDF计算能力,没有理由为了复用GJRM而引入跨语言依赖,
+   GJRM的价值在这次研究里只是"提供了可以直接读源码核实的矩形差分公式和copula家族分类",
+   不是"必须安装的工具"。
+
+### 方法论诚实说明
+
+这次会话测试过的`arxiv.org`、`ar5iv.labs.arxiv.org`、`discovery-pp.ucl.ac.uk`、
+`openaccess.city.ac.uk`、`statmod.org`、`cran.r-project.org`、`giampmarra.r-universe.dev`、
+`ftp.fau.de`、`rdrr.io`、`search.r-project.org`、`www.quantargo.com`、
+`publications.goettingen-research-online.de`、`sa-ijas.org`、`api.semanticscholar.org`、
+`salford-repository.worktribe.com`、`www.statsmodels.org`、`trading-pascal.duckdns.org`
+(一个托管了某人本地Python环境快照的非官方域名,顺手试过)全部返回`EGRESS_BLOCKED`,和
+"9-12"到"10-01"反复记录的同一种环境限制完全一致。**这次`raw.githubusercontent.com`
+依然稳定可用**,是本节可信度最高的部分来源:GJRM的`bdiscrdiscr.R`(矩形差分公式)、
+`BiCDF.r`(copula家族代码表)、`Cop1Cop2.r`(旋转家族列表)三个文件,以及statsmodels的
+`archimedean.py`(FrankCopula)、`elliptical.py`(GaussianCopula)两个文件,**全部是
+直接读取GitHub raw内容确认,不是WebSearch摘要转述**,可信度和笔记里标注过"已读全文"的
+章节(footBayes、piratings、goal_expectancy.py等)相当。McHale & Scarf两篇论文的具体
+研究对象区分(2007=射门统计量、2011=进球数)、2011年论文"依赖强弱随竞争平衡变化"这条
+结论,以及Marra & Radice football论文的"等系数约束提升预测表现"这条结论,**均只到
+WebSearch自动摘要这一层,没有一篇原始论文被直接读取**,"9-23"节"条件相关可能转正"这个
+具体子论断这次没有找到任何来源证实或推翻,应继续视为未决问题,不应被这次研究的其他发现
+附带坐实。
+
+### 信息来源
+
+- McHale, I. & Scarf, P. (2007), "Modelling soccer matches using bivariate discrete
+  distributions with general dependence structure", *Statistica Neerlandica*, 61(4),
+  432-445(仅WebSearch摘要,原文`salford-repository.worktribe.com`、`ideas.repec.org`
+  均被拦截未核实):[IDEAS/RePEc](https://ideas.repec.org/a/bla/stanee/v61y2007i4p432-445.html),
+  [Salford Repository](https://salford-repository.worktribe.com/output/1474752/modelling-soccer-matches-using-bivariate-discrete-distributions-with-general-dependence-structure)
+- McHale, I. & Scarf, P. (2011), "Modelling the dependence of goals scored by opposing
+  teams in international soccer matches", *Statistical Modelling*, 11(3), 219-236
+  (仅WebSearch摘要,原文`statmod.org`被拦截未核实,"9-23"节已引用过这篇但未区分它和
+  2007年论文的研究对象差异):[statmod.org摘要页](https://statmod.org/smij/Vol11/Iss3/McHale/Abstract.html)
+- Marra, G., Radice, R. et al., "Generalised Joint Regression for Count Data with a
+  Focus on Modelling Football Matches"(后发表于*Statistics and Computing*, 2020,
+  "等系数约束"提升足球预测表现的发现):仅WebSearch摘要,`arxiv.org`、
+  `ar5iv.labs.arxiv.org`、`discovery-pp.ucl.ac.uk`、`openaccess.city.ac.uk`、
+  `publications.goettingen-research-online.de`、`sa-ijas.org`均被拦截未核实具体数字:
+  [arXiv 1908.00823](https://arxiv.org/pdf/1908.00823),
+  [UCL Discovery](https://discovery.ucl.ac.uk/id/eprint/10101339/),
+  [City Research Online](https://openaccess.city.ac.uk/id/eprint/24369/)
+- **GJRM R包源码(直接读取`raw.githubusercontent.com`原始文件确认,非摘要)**:离散
+  copula矩形差分公式、copula家族数值代码表、旋转家族列表:
+  [R/bdiscrdiscr.R](https://raw.githubusercontent.com/cran/GJRM/master/R/bdiscrdiscr.R),
+  [R/BiCDF.r](https://raw.githubusercontent.com/cran/GJRM/master/R/BiCDF.r),
+  [R/Cop1Cop2.r](https://raw.githubusercontent.com/cran/GJRM/master/R/Cop1Cop2.r),
+  [DESCRIPTION](https://raw.githubusercontent.com/cran/GJRM/master/DESCRIPTION)
+  ——包本身的CRAN/r-universe文档页(`cran.r-project.org`、`giampmarra.r-universe.dev`、
+  `ftp.fau.de`、`rdrr.io`、`search.r-project.org`、`www.quantargo.com`)全部被拦截,
+  未能核实`gjrm()`主函数的完整参数文档,本节关于`margins="P"`等主函数细节经WebSearch
+  摘要获得,源码部分(三个.R/.r文件)可信度明显更高。
+- **statsmodels源码(直接读取`raw.githubusercontent.com`原始文件确认,非摘要)**:
+  `FrankCopula`/`GaussianCopula`的构造函数、参数取值范围、`cdf()`方法实现:
+  [statsmodels/distributions/copula/archimedean.py](https://raw.githubusercontent.com/statsmodels/statsmodels/main/statsmodels/distributions/copula/archimedean.py),
+  [statsmodels/distributions/copula/elliptical.py](https://raw.githubusercontent.com/statsmodels/statsmodels/main/statsmodels/distributions/copula/elliptical.py)
+  ——官方文档站`www.statsmodels.org`被拦截,未能核实完整API文档和官方示例代码,本节
+  关于类用法的描述以直接读取的源码为准。
+- Frank copula的θ与Kendall's tau、Gaussian copula的corr与Spearman's rho之间的解析/
+  半解析对应关系:标准copula统计学教材级结论(如Nelsen《An Introduction to Copulas》),
+  本次未重新搜索核实具体公式系数,按通用统计学常识记录,供以后实现时作为初始值估计的参考
+  方向,不是本次搜索到的新文献结论。
+- `dixon_coles.py`第89-98行`tau()`、第101-151行`fit_dixon_coles()`、第155-169行
+  `match_ou_prob()`源码(直接读取本仓库文件确认,非外部来源):确认现有依赖结构修正
+  (τ_ρ)和这次提出的copula方案作用在同一个计算步骤上,不能同时保留两者。
+
+---
