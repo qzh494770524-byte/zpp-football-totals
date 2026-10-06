@@ -4965,3 +4965,167 @@ Stüttgen (2025)论文里"进攻强度/防守强度"的精确定义和回归系�
 真正支撑"反直觉方向"这个核心论点的具体数字来源。**
 
 ---
+
+## 2026-10-06 回测命中率的"有效样本量"被高估:单一策略内部的聚类/自相关问题——design effect、Cochran's Q异质性检验、wild cluster bootstrap,以及为什么`v8_backtest_pipeline.py`报的"15场冲突样本66.7% vs 33.3%"这类数字的置信区间可能比看起来宽得多
+
+### 为什么研究这个,以及和"9-16"的区别
+
+任务清单六大类(Dixon-Coles实现细节、联赛进球基准、公众下注偏好、xG方法论、去水换算、
+sharp money识别)和这六类之外已经被系统查过的方向(数据窥探/多重检验、预测组合、校准方法、
+让球盘效率、方差分解、时间衰减……)加起来已经覆盖了33节,翻遍标题确认"样本量与统计显著性
+在体育博彩回测里的正确用法"这条任务清单条目里,**还有一个具体子问题从未被单独处理过**。
+
+容易和这次混淆的是"9-16"节查过的"有效独立试验数"——但"9-16"解决的是**跨策略/跨筛选
+阈值维度**的问题:你在同一份历史数据上试了多个候选规则(比如"偏离幅度>0.3"和">0.4"),
+挑出表现最好的那个报告出来,这些候选规则之间相关,所以"你到底独立试了几次"要打折扣
+(effective rank/聚类计数)。这次研究的是完全不同的一个轴:**即使你只认定了一个固定规则、
+一次都没有调参挑选,这个规则在历史上的N场比赛上的命中记录,本身是不是N次独立的伯努利试验?**
+这是`v8_backtest_pipeline.py`文档字符串里"冲突时信进球模型"这条规则所依赖的核心假设——
+该文件第20行写"方向冲突 -> 进球模型命中率明显更高(66.7% vs 33.3%,但样本仅15场)",
+第366-383行`main()`里统计命中率时,对"两模型一致/冲突/仅盘口信号"三个分组分别做
+`hits/len(grp)`这样的简单比例计算,隐含假设是每一场比赛的命中/不中,是一次独立同分布的
+伯努利试验——如果这个假设不成立,15场里的"66.7%"背后对应的真实不确定性,会比"二项分布
+15次试验"这个直觉大得多。
+
+### 查到的东西
+
+**1. 问题的本质:为什么比赛之间可能不独立。** 本项目的信号全部来自同一批博彩公司在特定
+时间窗口的盘口快照(`nowgoal_collect.py`/`fetch_nowgoal.py`抓取),同一批比赛天然共享
+至少三种可能的相关性来源:(a) **同一联赛**——同一联赛的球队共享同一套裁判尺度、同一个
+赛季阶段(比如"9-25"节研究过的"保级/争冠动机"在同一轮次会同时影响同联赛多场比赛);
+(b) **同一采集批次/同一天**——如果某类系统性市场情绪(比如"9-12"节研究过的公众"压大"
+偏好)在某个周末特别强,会同时压低那个周末所有比赛的大水位,导致那批比赛的"水位漂移信号"
+方向同时出错或同时正确;(c) **同一批博彩公司面板**——如果某几家公司在抓取窗口恰好报价
+延迟或系统性偏离,会同时污染当天所有用到这几家公司数据的比赛。只要存在任何一种共享因子,
+"15场独立伯努利试验"这个假设就不成立,真实的标准误会比教科书二项分布公式算出来的大。
+这个道理在聚类稳健推断的综述里讲得很直接:**忽略聚类结构会让标准误系统性偏小、t统计量
+系统性偏大、"看起来显著"的结果在考虑组内相关后往往就消失了**([MetricGate: Ignoring
+Clustering Quietly Inflates Your Significance](https://metricgate.com/blogs/clustered-standard-errors-ignored/))。
+
+**2. 量化这个问题的第一个工具:design effect(设计效应,Kish 1965)。** 这是调查抽样统计学
+里最早、最直接的框架。公式是 **DEFF = 1 + (m̄-1)ρ**,其中m̄是每个簇(cluster,比如"同一
+联赛"或"同一天")的平均观测数,ρ是组内相关系数(intraclass correlation, ICC)——
+衡量"同一簇内两场比赛的命中结果有多相关"。**有效样本量 = 名义样本量 / DEFF**。
+举例直觉:如果ρ只有0.2(并不算很强的相关),一个簇平均5场比赛,DEFF = 1+4×0.2 = 1.8,
+意味着名义上的15场比赛,有效样本量只有约8.3场——这足以让"66.7% vs 33.3%"这种看起来
+悬殊的差异,置信区间宽到完全盖住50%
+([Wikipedia: Design effect](https://en.wikipedia.org/wiki/Design_effect))。二元结果
+(命中/不中这种0/1变量)的ICC本身有专门的估计方法——ANOVA矩估计法、Fleiss-Cuzick估计量、
+Pearson估计量、基于广义估计方程(GEE)或随机截距logistic回归的估计量,文献综述见
+Donner (1986)、Ukoumunne (2002),R里有现成实现(`aod`/`aods3`包的`iccbin()`函数)
+([R文档: iccbin](https://search.r-project.org/CRAN/refmans/aod/html/iccbin.html))。
+
+**3. 比估计ICC更简单、更适合本项目现有小样本的第一步诊断:Cochran's Q异质性检验。**
+这是荟萃分析(meta-analysis)里的标准工具,逻辑可以直接套用到本项目:把每个簇(比如
+每个联赛)当成荟萃分析里的一"项研究",该簇的命中率当成该研究的"效应量",检验原假设
+"所有簇的真实命中率相同,簇间观测到的差异纯粹是抽样误差"。统计量
+**Q = Σ wᵢ(yᵢ - θ̂)²**(wᵢ为逆方差权重),在原假设下服从自由度k-1的卡方分布
+(k=簇数)。配套的**I²统计量 = max(0, (Q-(k-1))/Q) × 100%**,衡量"总变异里有多少比例
+来自簇间真实异质性而非抽样误差",经验分界线是25%/50%/75%对应低/中/高异质性
+([MetricGate: Understanding I-Squared in Meta-Analysis](https://metricgate.com/blogs/understanding-i-squared/))。
+**这个检验的好处是不需要先估计ICC、不需要假设簇的大小相等,用现有的`predictions.json`
+按`league`字段分组就能直接算**——这是本项目现在就能用而不需要任何新数据的部分。
+
+**4. 如果诊断出真的有聚类/异质性,怎么算出"校正后"的置信区间:wild cluster bootstrap。**
+这是计量经济学里专门解决"聚类数量很少(small number of clusters)"场景的方法,
+Cameron, Gelbach & Miller (2008)提出。背景问题:标准的"聚类稳健标准误"(cluster-robust
+SE)在簇数量大(经验法则30-50个以上)时表现良好,但**簇数量只有10-20个时,方差估计系统性
+偏低、t统计量系统性偏大,假阳性率远超名义的5%**——这正是本项目的处境:一次回测批次里
+出现的联赛数、甚至"同一天"的不同日期数,几乎肯定远低于30。Wild cluster bootstrap的做法:
+对每个簇的残差整体乘以一个随机符号(Rademacher权重,±1各50%概率;簇数<10时推荐用
+**Webb six-point权重**表现更好),重新构造检验统计量,重复几千次,得到经验分布再算p值
+——**簇数≤12时甚至可以做"全枚举"(exact enumeration)而不是随机抽样**
+([Stata: wild cluster bootstrap inference](https://www.stata.com/features/overview/wild-cluster-bootstrap-inference/);
+推荐阈值与Webb权重细节综述见[学术快讯转载:The Wild Bootstrap with a Small Number of
+Large Clusters](https://academicnewsletter.sufe.edu.cn/info/264947))。
+
+**5. 如果以后拿到了比赛日期(kickoff),聚类单位换成"连续时间窗口"时该用什么:
+moving block bootstrap。** Wild cluster bootstrap假设簇之间互相独立、簇内部任意交换
+(exchangeable)结构已知,适合"联赛"这种离散的、天然分组的簇。但如果聚类单位是"同一天"
+或"连续几天"这种时间序列结构(比如怀疑的是"某个时间窗口内的市场情绪自相关",而不是
+"同一联赛"这种横截面分组),更合适的工具是**移动块自助法(moving block bootstrap,
+Künsch 1989)**:不打乱时间顺序,而是把整段序列切成若干个连续的"块",对块做有放回重采样,
+这样块内部的自相关结构被完整保留下来,再对重采样出的合成序列计算命中率,重复几千次得到
+置信区间。这和笔记"9-16"节提到的White's Reality Check所用的**stationary bootstrap**
+(Politis & Romano,用几何分布的随机块长而不是固定块长)是同一个家族的方法,但"9-16"
+用它解决的是"多重检验"问题,这里用来解决的是"单一序列内部自相关导致方差被低估"问题,
+是同一工具、不同目的的复用([Capital Spectator: A Better Way To Run Bootstrap Return
+Tests: Block Resampling](https://www.capitalspectator.com/?p=7396))。块长的选择没有
+万能公式,取决于自相关衰减速度和序列长度,实践中常见做法是取几个块长做敏感性分析,
+结论对块长不敏感才算稳健。
+
+### 对本项目的适用性:能不能接入,需要什么数据
+
+**现在就能做、不需要任何新数据的部分:** `v8_pipeline_out/predictions.json`里每一行
+已经带有`league`字段(`v8_backtest_pipeline.py`第341行`row = dict(... league=m['league']
+...)`)。写一个独立的诊断脚本(不改`v8_backtest_pipeline.py`本体),按`league`分组算
+每组命中率,套第3点的Cochran's Q/I²公式,就能立刻知道"现在报的命中率,在联赛维度上是否
+存在值得警惕的异质性"——这是本节里唯一一处建议新建脚本的地方,且和主流程完全解耦,
+只读`predictions.json`不碰抓取/建模逻辑。
+
+**需要补一个已知缺口才能做的部分(和"9-27""10-05"两节记录的是同一处代码缺口):**
+按"日期"聚类(检验(2)里提到的"同一采集批次/同一天"相关性来源)需要比赛的`kickoff`
+字段,但`v8_backtest_pipeline.py`第65-82行`load_workbook_data()`里,Excel行解包时
+第70-71行明明读到了`kickoff`(元组第3个位置),第81-82行构造`matches[mid]`字典时却
+**没有把它存进去**。值得注意的是,`calibration_check_v8.py`第21-26行已经证明了这条路
+走得通——它完全绕开`matches`字典,自己重新遍历一遍`wb['全部赛事与比分']`把
+`kickoff_by_mid`单独抽出来,只是为了做一次"按日期切分训练/测试集"的校准检验(第43-47行),
+而不是为了聚类诊断。这说明给`matches[mid]`补上`kickoff`是一行代码的改动
+(`dict(league=league, home=home, away=away, kickoff=kickoff, status=status, ...)`),
+数据本来就在,只是两处代码各自为政、没有在主数据结构里共享。补上之后,"按日期聚类做
+Cochran's Q"和"按日期做moving block bootstrap"这两条路径就都打通了。
+
+**什么时候该用哪一层工具,建议的顺序:** 先用Cochran's Q/I²做免费诊断(现在就能做)——
+如果I²很低(比如<25%),说明现有"15场/66.7% vs 33.3%"这类数字的聚类问题不严重,
+继续用简单二项分布置信区间问题不大;如果I²偏高,再决定是否值得为wild cluster bootstrap
+或block bootstrap写专门的重采样脚本——**不建议跳过诊断直接上wild bootstrap**,因为
+本项目当前的单批样本量(15-89场)本身就小,为一个可能根本不存在的问题引入一整套
+重采样框架,复杂度收益比不划算,这和笔记反复强调的"不要在小样本上过度工程化"是一致的
+态度。
+
+### 信息来源
+
+- Design effect公式(Kish 1965, *Survey Sampling*)与"有效样本量=n/DEFF":
+  [Wikipedia: Design effect](https://en.wikipedia.org/wiki/Design_effect)。
+- 忽略聚类结构导致标准误偏小、显著性虚高的一般性说明:
+  [MetricGate: Ignoring Clustering Quietly Inflates Your Significance](https://metricgate.com/blogs/clustered-standard-errors-ignored/),
+  聚类数量经验法则(30-50个以上渐近推断才可靠,5-30个会过度拒绝原假设)同一来源交叉印证。
+- 二元结果ICC的估计方法(ANOVA矩估计、Fleiss-Cuzick、Pearson、GEE、随机截距logistic)
+  综述性描述,经WebSearch摘要交叉印证(Donner 1986、Searle et al. 1992、Ukoumunne 2002
+  等原始文献未直接核实):[R文档: iccbin {aod}](https://search.r-project.org/CRAN/refmans/aod/html/iccbin.html)。
+- Cochran's Q检验公式、I²统计量公式与25%/50%/75%经验分界线:
+  [MetricGate: Understanding I-Squared in Meta-Analysis](https://metricgate.com/blogs/understanding-i-squared/)。
+- Wild cluster bootstrap方法本身、Rademacher/Webb权重、簇数<10/≤12全枚举阈值:
+  Cameron, Gelbach & Miller (2008)原始方法,经[Stata官方文档: wild cluster bootstrap
+  inference](https://www.stata.com/features/overview/wild-cluster-bootstrap-inference/)
+  与[学术快讯转载页面](https://academicnewsletter.sufe.edu.cn/info/264947)交叉印证,
+  原始NBER/Queen's工作论文页面本次未直接核实(仅搜索摘要)。
+- Moving block bootstrap用于保留自相关结构、与White's Reality Check所用stationary
+  bootstrap同属一个方法家族:[Capital Spectator: A Better Way To Run Bootstrap Return
+  Tests: Block Resampling](https://www.capitalspectator.com/?p=7396)。
+- `v8_backtest_pipeline.py`第20行文档字符串、第65-112行`load_workbook_data()`、
+  第321-359行`main()`命中率统计逻辑、第341行`row`字典构造源码(直接读取本仓库文件确认,
+  非外部来源):确认命中率统计按组做简单比例计算、`league`字段已在`predictions.json`里
+  可用、`kickoff`字段解包后未存入`matches`字典。
+- `calibration_check_v8.py`第18-26行、第43-47行源码(直接读取本仓库文件确认,非外部
+  来源):确认`kickoff`字段在源Excel里是可读的,且已有独立代码路径证明"按日期分组"
+  在本项目数据结构下可行,只是当前只用于训练/测试时间切分,未用于聚类诊断。
+
+### 方法论诚实说明
+
+本节引用的全部方法(design effect、ICC估计、Cochran's Q/I²、wild cluster bootstrap、
+block bootstrap)都来自**调查抽样统计学、荟萃分析方法学、计量经济学**这三个通用统计学
+领域,不是体育博彩或足球建模的专门文献——这次WebSearch没有找到、也没有刻意去找"有人把
+design effect或wild cluster bootstrap直接用在体育博彩回测上"的先例,这条应用是本节自己
+做的类比推理,不是转述某篇已发表的体育分析文献结论,这一点和笔记里大多数"转述学术论文
+核心数字"的章节性质不同,更接近"9-16"节"把一条经验戒律变成可以量化的检验"的处理方式。
+此外,本节**没有对本项目任何历史回测数据做实际的ICC估计或Q检验计算**——不编造"现有
+15场/79场样本到底有没有显著聚类"这个具体结论,这需要真正跑一遍诊断脚本在真实
+`predictions.json`上算出来,留给以后有人决定要不要接入时再做,本节只负责把方法论和
+接入方式讲清楚。WebSearch本身对这几个主题的覆盖相对较好(都是主流统计学方法,Wikipedia/
+Stata官方文档/MetricGate等信息质量较高的来源能直接命中),没有遇到此前几节常见的
+大面积学术域名`EGRESS_BLOCKED`情况,但也因此没有尝试WebFetch直接核实任何一篇原始期刊
+论文(Kish 1965、Cameron-Gelbach-Miller 2008、Künsch 1989的原始出处均未直接读取),
+按笔记惯例应视为"方法论框架和公式可信度较高,但未做原始文献的逐字核验"。
+
+---
