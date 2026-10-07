@@ -5129,3 +5129,187 @@ Stata官方文档/MetricGate等信息质量较高的来源能直接命中),没�
 按笔记惯例应视为"方法论框架和公式可信度较高,但未做原始文献的逐字核验"。
 
 ---
+
+## 2026-10-07 树模型/集成学习(XGBoost、随机森林等)能不能替代或补充Dixon-Coles:2017 Soccer Prediction Challenge的实证数字,以及"换特征"和"换模型"是两件不能混为一谈的事
+
+### 为什么研究这个,和笔记已有内容的区别
+
+任务清单六大类(Dixon-Coles实现细节、联赛进球基准、公众下注偏好、xG方法论、去水换算、
+样本量/sharp money)全部系统查过,但翻遍标题确认**"用梯度提升树/随机森林这类机器学习
+集成方法直接预测总进球或大小球,和泊松族模型/庄家赔率相比表现如何"这个具体问题,笔记
+从未单独处理过**。容易和已有内容混淆的三处区别需要先说清楚:
+
+1. 笔记开头第37-38行提到的"简易泊松模型"(用真实球队近6场/主客场进失球数据)已经在
+   样本外验证中被废弃——但那是**参数化的泊松模型**,不是树模型/集成方法,方法论上是
+   完全不同的两件事。
+2. "9-11"节(行9-24)引用的Walsh & Joshi (2024) NBA论文,查的是"按校准选模型"这个
+   选模型标准问题,不是"ML模型本身预测力够不够"这个问题;该节附带提到的
+   56%~99%准确率区间(行741-744)是转述其他论文零散引用的NBA/足球分类器准确率数字,
+   没有统一数据集/统一任务,不能当成"ML能不能跑赢赔率"的证据。
+3. "9-26"节(score effects)提到的"LASSO筛选+泊松回归"分析的是技术统计指标(射门数、
+   过人数)对**比赛结果**(胜平负)的关系,不是对**总进球**的直接建模,也不是树模型。
+
+本节聚焦一个更窄、更具体的问题:**有没有发表的研究,直接用梯度提升树/随机森林/k近邻
+这类机器学习方法预测总进球或大小球,并和赔率基准做了严格对照?如果有,结论是什么,
+对本项目现有的H2H抓取数据能不能用得上?**
+
+### 查到的东西
+
+**1. 最权威、最可核实的基准来源:2017 Soccer Prediction Challenge(Dubitzky, Berrar等
+组织)。** 这次竞赛基于"Open International Soccer Database"(52个联赛、35个国家、
+216,743场比赛,2000年至今,因为2000年是大多数联赛普遍采用"胜3分制"的分界点),任务是
+预测2017年3月31日到赛季末206场未来比赛的1X2结果,评估指标是**RPS(Ranked Probability
+Score,排序概率得分,专门为"胜/平/负"这种有序多分类概率预测设计,比单纯准确率更能
+反映概率校准质量)**。这是笔记目前查到的、少数真正做过"样本外、提前锁定测试集、和
+赔率基准严格对照"的公开机器学习竞赛,比大多数"某篇论文自称XX%准确率"的研究可信得多,
+因为测试集是赛前就公布、任何参赛者都不能用赛后数据调参。
+
+**2. Berrar & Dubitzky (2019, *Machine Learning*期刊, Springer)把赛后复盘的最佳方法
+写成论文,核心贡献是两个特征工程方法,不是模型本身:** "recency feature extraction"
+(近期表现加权特征提取)和"rating feature learning"(评级特征学习,逻辑上和笔记"9-22"
+节讲的pi-rating同属"把历史比分迭代转换成一个评级差"这类方法,但用学习的方式而非固定
+衰减公式生成)。学习算法用的是k近邻和XGBoost树集成。**数字(经WebSearch摘要交叉印证,
+下方"信息来源"注明哪些数字之间有不一致、未能直接核实原文):** 竞赛期间实际夺冠的
+提交方案是"k近邻+评级特征学习",测试集准确率0.5049、RPS 0.2149;赛后(不计入竞赛排名)
+重新调出的"XGBoost+评级特征"版本准确率0.5194、RPS 0.2054,比k近邻版本更好。另一组
+研究者Hubáček、Šourek、Železný同场竞赛里用"XGBoost+pi-rating特征"做到准确率0.5243、
+RPS 0.2063。不同WebSearch摘要对"赔率基准本身的RPS"给出的数字不完全一致(一次摘要给出
+0.2020,另一次未能复现同一数字),这个基准值本身没有核实到原始论文,应视为"同一量级,
+具体小数点后两位不保证一致"。**定性结论比具体数字更可信、也更重要:这几个独立方法算出的
+RPS都落在0.20~0.22这个窄区间内,和赔率基准大致同一量级,个别方法(赛后版本的XGBoost)
+小幅优于赔率基准,但没有任何方法显著、稳定地压倒赔率。**
+
+**3. 这条证据和笔记"9-11(续2)"ELO-Odds论文的"赔率是信息量理论上限"结论不矛盾,反而
+互相印证一个更精确的区分:** ELO-Odds论文说的是"**只用赔率反推出的特征**,不可能跑赢
+赔率本身",而pi-rating/评级特征学习用的是**真实比赛比分历史**,是独立于赔率的另一个
+信息源,理论上就不受那条结论约束。2017 Challenge的结果说明:这个独立信息源确实能让
+ML模型达到和赔率同一个量级,但"达到同一量级"和"显著超越"是两件事——目前查到的证据只
+支持前者,不支持后者。
+
+**4. Over/under总进球(而非1X2)的直接证据,质量明显弱于上面两条,需要单独标注可信度:**
+Su, Wong & Wang(2024,*Journal of Big Data*,Springer,DOI 10.1186/s40537-024-01008-2,
+经WebSearch摘要获得,`journalofbigdata.springeropen.com`被代理拦截未能直接读取原文)
+用EA Sports FIFA系列球员评分(攻击/技术/移动/力量/心态/防守/门将七大类、34项技能分)
+加比赛记录,覆盖欧洲五大联赛五个赛季,训练XGBoost/随机森林/CNN/LSTM/SVM预测1X2和
+大小球2.5。随机森林表现最好:1X2准确率55.9%,**大小球2.5准确率62.7%**,全部模型都
+"跑赢了由赔率构成的baseline"。这条数字看起来很诱人,但有三处未能核实、应打折扣的
+地方:(a) "赔率构成的baseline"具体怎么构造(是否正确去水、取中位数还是单一公司)
+未能查到细节;(b) 大小球2.5这个结果变量本身的基础分布(欧洲五大联赛大小球2.5的
+真实比例通常接近50/50但不完全均匀)会直接影响"准确率"这个指标的解读,论文摘要没有
+报告多数类基线(majority-class baseline)作对照;(c) 用FIFA游戏评分预测真实比赛结果,
+本质上是"用另一个独立评级系统(EA的游戏评分算法)当特征",这个评级系统本身的构造方式
+不透明,不像pi-rating/Elo那样有公开、可复现的计算公式。**这条证据应视为"方向性线索",
+不是"确认的结论"。**
+
+**5. 必须同时呈现的反面证据(避免只挑好消息,这是笔记反复强调的原则):**
+   - 另一项研究(经WebSearch摘要,未核实具体文献)明确报告:"despite using a
+     state-of-the-art gradient boosting model along with a sophisticated engineered
+     set of features, researchers were unable to outperform predictions based on
+     bookmaker odds",且**赔率本身也跑赢了2017 Challenge里大多数参赛提交**——
+     这和第2点里"个别方法小幅优于赔率"的发现是同一个竞赛的两面,不矛盾:大多数尝试
+     失败,极少数(用了正确特征工程的那几个)勉强小幅领先。
+   - CARMA 2020会议论文《Investigating inefficiencies of bookmaker odds in football
+     using machine learning》(经WebSearch摘要,`archive.carmaconf.org`被代理拦截
+     未能直接读取)的summary:发现的不效率存在,但**随时间推移效应递减**——市场在
+     吸收这类可被ML学习到的信息,说明"今天发现一个ML信号跑赢赔率"不代表这个优势能
+     持续存在。
+   - 另一篇综述性结论(经WebSearch摘要,未核实出处):单赛季内观察到的不效率**不是
+     跨联赛持续、系统性的**,而且模拟分析显示,即使市场完全有效,单赛季样本里出现
+     "统计显著"的效应本身就有不低的概率纯属偶然——这条和笔记"9-16"节讲的"样本内
+     看起来显著、样本外消失"是同一类现象,再次印证。
+   - MDPI *Applied Sciences*(2020,经WebSearch摘要,`d-nb.info`被代理拦截未能直接
+     读取)用欧洲五大联赛2006-2018赛季的球员特征做集成学习,得到统计和经济双重显著的
+     收益(约每场1.58%),跑赢单一ML方法、线性回归、无脑策略——这是一条相对积极的
+     证据,但摘要本身附带强烈警告:**"most sophisticated ML models in betting actually
+     underperform simpler models in production, not because the algorithm is bad,
+     but because the algorithm is overfit to training data that's no longer
+     representative"**——这和笔记"9-16"节数据窥探/过拟合的教训、以及反复强调的
+     "不要在小样本上过度工程化"是同一个教训的另一次独立印证。
+
+### 对本项目的适用性:能不能接入,需要什么数据
+
+**直接读取`v8_backtest_pipeline.py`源码确认的关键事实(第224-260行):** 现有的"进球
+模型"第二步,从`live11.nowgoal26.com/match/h2h-{mid}`页面解析出的是**Standings板块的
+汇总统计**——`parse_h2h_standings()`只抓两个`<table>`,`compute_expected_goals()`里
+`pick_rate()`函数用的字段是`Total`/`Home`/`Away`/`Last 6`这几档**已经聚合好的"场次数+
+进球数+失球数"计数**,再除出一个平均进球率,**从代码结构看不到任何保留"逐场比分
+序列"的地方**——也就是说,第2点里Berrar & Dubitzky真正带来提升的"recency feature
+extraction"(需要知道每场比赛具体是哪一天、按时间加权)和"rating feature learning"
+(需要像pi-rating一样逐场迭代更新评级,不能从一个已经按"近6场"打包好的平均值反推出来)
+这两个关键特征工程方法,**在现有数据结构下都做不了**——需要的不是新增字段,而是改变
+H2H抓取的*粒度*:把"抓汇总表"换成"抓逐场比赛的日期+比分明细"(nowgoal的h2h页面本身
+应该是有这个明细表格的,只是当前`parse_h2h_standings()`没有解析它)。
+
+**建议的验证顺序,按成本从低到高排列,不建议跳步:**
+1. **最低成本、不需要改抓取逻辑的对照实验:** 用现有`compute_expected_goals()`已经
+   算出的汇总特征(`home_scored_home`/`away_conceded_away`等4个比率),不新增任何
+   数据,只是把下游从"手写的泊松式加总公式"换成一个XGBoost/随机森林回归器(预测总
+   进球数)或分类器(预测是否大于盘口线),在历史数据上做严格的train/test时间切分
+   回测。**预期结果大概率不会比已废弃的泊松版本好**,因为输入信息完全相同,只是
+   换了函数形式——这一步的价值是"花小成本排除‘换个模型就好了’这个最省事但大概率
+   无效的假设",而不是真的期待它成功。
+   如果连这一步都没做就直接跳到第2步,等于重复"9-11(续2)"节批评的"在同一份信息上
+   换着法子重新组合"的错误。
+2. **只有第1步证实"仅靠换模型确实没用"之后,再决定是否值得为"保留逐场H2H比分明细、
+   实现pi-rating式迭代评级特征学习"这个更贵的改动投入成本。** 这一步才是文献里真正
+   验证过有效的组合(特征工程升级+树模型),如果省略特征工程这一半、只做模型这一半,
+   文献证据不支持会有效果。
+
+**和已有"pi-rating"笔记(9-22)的衔接:** 那一节已经指出pi-rating"算的是净胜球不是
+总进球"这个结构性限制,本节补充的信息是——即使pi-rating这类评级特征本身不直接预测
+总进球,**把它当作XGBoost等树模型的输入特征之一(而非唯一输入),在1X2任务上有发表
+证据支持能达到和赔率同一量级**;但目前没有同等质量的证据证明这个组合对over/under
+总进球任务同样有效(第4点Su/Wong/Wang论文是目前唯一直接证据,质量较弱)。
+
+### 信息来源
+
+- 2017 Soccer Prediction Challenge赛制、评估指标(RPS)、Open International Soccer
+  Database规模(216,743场、52联赛、35国家、2000年起)与竞赛时间窗口:经WebSearch摘要,
+  原始出处为Dubitzky, Berrar et al.《The Open International Soccer Database for
+  machine learning》(2019, *Machine Learning*期刊),`mlanthology.org`列出条目但未
+  直接读取全文。
+- Berrar & Dubitzky (2019, *Machine Learning*期刊, Springer, DOI对应
+  `10.1007/s10994-018-5747-8`)的"recency feature extraction"/"rating feature
+  learning"方法描述与k近邻/XGBoost准确率、RPS数字:经两次独立WebSearch摘要交叉获得,
+  `link.springer.com`/`dl.acm.org`/`researchgate.net`均被代理拦截未能直接读取原文,
+  两次摘要给出的赔率基准RPS数值不完全一致,已在正文注明。
+- Hubáček、Šourek、Železný用XGBoost+pi-rating在同一竞赛的结果(准确率0.5243、
+  RPS 0.2063):经WebSearch摘要获得,原始文献未核实。
+- Su, Wong & Wang (2024, *Journal of Big Data*, DOI 10.1186/s40537-024-01008-2)
+  EA Sports FIFA球员评分预测1X2与大小球2.5:经多次WebSearch摘要交叉获得,
+  `journalofbigdata.springeropen.com`/`link.springer.com`均被代理拦截未能直接读取
+  原文,论文确切方法学细节(baseline构造方式、majority-class基线)未能核实。
+- "despite...sophisticated engineered features...unable to outperform
+  bookmaker odds"及"effect diminishing over time"的CARMA 2020会议论文
+  《Investigating inefficiencies of bookmaker odds in football using machine
+  learning》:经WebSearch摘要获得,`archive.carmaconf.org`被代理拦截未能直接读取,
+  ResearchGate链接(`researchgate.net/publication/342939153`)同样未直接访问。
+- 单赛季不效率"非跨联赛持续/系统性"及"完全有效市场下单赛季显著效应可能纯属偶然"的
+  综述性结论:经WebSearch摘要获得,具体论文出处(可能是Sascha Wilkens 2026年德甲
+  研究或另一篇系统综述)未能精确定位到单一文献,应视为多篇相近研究的摘要式归纳。
+- MDPI *Applied Sciences* (2020) 球员特征集成学习欧洲五大联赛2006-2018赛季ROI
+  1.58%/场及"生产环境过拟合"警告:经WebSearch摘要获得,`d-nb.info`被代理拦截未能
+  直接读取原文,论文确切标题/作者未能精确定位。
+- `v8_backtest_pipeline.py`第224-260行`parse_h2h_standings()`/`compute_expected_
+  goals()`源码:直接读取本仓库文件确认(非外部来源),确认当前H2H抓取只保留汇总
+  统计、不保留逐场比分序列。
+
+### 方法论诚实说明
+
+这是笔记目前**学术来源核实率最低的一节之一**:核心数字(2017 Challenge的RPS/准确率、
+Su/Wong/Wang论文的62.7%、CARMA论文结论、MDPI论文的1.58%ROI)全部只经WebSearch摘要
+获得,`link.springer.com`、`dl.acm.org`、`researchgate.net`、`arxiv.org`(包括
+`www.arxiv.org`子域名)、`journalofbigdata.springeropen.com`、`archive.carmaconf.org`、
+`d-nb.info`、`doaj.org`、`oro.open.ac.uk`、`ideas.repec.org`、`axi.lims.ac.uk`、
+`norma.ncirl.ie`、`themoonlight.io`——本次尝试WebFetch的几乎每一个学术/机构域名都被
+代理拦截(`EGRESS_BLOCKED`),比此前任何一节遇到的拦截范围都更大,只有WebSearch自带的
+摘要生成能用。两处具体数字(2017 Challenge赔率基准RPS、单赛季不效率的精确论文出处)
+在不同搜索query下给出了不完全一致或模糊的结果,已在正文和来源列表如实标注,**不应
+把本节任何具体小数点数字当作最终定论,只应把"ML+真实比分特征能达到和赔率同一量级、
+但没有稳定压倒性优势、特征工程比换模型更重要、过拟合风险持续存在"这几条定性结论当作
+可信的方向性知识**。本节没有对本项目自己的历史数据做任何实际建模或回测,"建议的验证
+顺序"一节里的"预期结果大概率不会比已废弃的泊松版本好"是基于"输入信息相同、只换模型
+形式"这条逻辑推断,不是编造的实测结果,真正的数字需要以后有人跑一遍第1步的对照实验
+才能确认。
+
+---
